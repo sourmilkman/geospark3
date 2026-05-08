@@ -1,0 +1,16 @@
+# Android/Gradle build output
+.gradle/
+build/
+**/build/
+
+# Release/signing artifacts
+*.apk
+*.aab
+*.idsig
+*.keystore
+*.jks
+
+# Crash logs and local IDE state
+hs_err_pid*.log
+.idea/
+.claude/
