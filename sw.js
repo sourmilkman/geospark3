@@ -1,8 +1,16 @@
-const CACHE_NAME = 'geospark2-v1';
+const CACHE_NAME = 'geospark3-v1';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './src/app.js',
+  './src/styles.css',
+  './data/europe.json',
+  './data/south_america.json',
+  './data/asia.json',
+  './data/us_states.json',
+  './data/africa.json',
+  './data/global.json',
   './icon-192.png',
   './icon-512.png'
 ];

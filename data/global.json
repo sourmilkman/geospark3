@@ -1,0 +1,12 @@
+[
+  {"name":"Canada","cc":"ca","capital":"Ottawa","city":"Toronto","continent":"North America"},
+  {"name":"United States","cc":"us","capital":"Washington D.C.","city":"New York City","continent":"North America"},
+  {"name":"Mexico","cc":"mx","capital":"Mexico City","city":"Mexico City","continent":"North America"},
+  {"name":"Australia","cc":"au","capital":"Canberra","city":"Sydney","continent":"Oceania"},
+  {"name":"New Zealand","cc":"nz","capital":"Wellington","city":"Auckland","continent":"Oceania"},
+  {"name":"Fiji","cc":"fj","capital":"Suva","city":"Suva","continent":"Oceania"},
+  {"name":"Iceland","cc":"is","capital":"Reykjavik","city":"Reykjavik","continent":"Europe"},
+  {"name":"Kazakhstan","cc":"kz","capital":"Astana","city":"Almaty","continent":"Asia"},
+  {"name":"Jamaica","cc":"jm","capital":"Kingston","city":"Kingston","continent":"North America"},
+  {"name":"Cuba","cc":"cu","capital":"Havana","city":"Havana","continent":"North America"}
+]

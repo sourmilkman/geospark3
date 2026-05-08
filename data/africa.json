@@ -1,0 +1,14 @@
+[
+  {"name":"South Africa","cc":"za","capital":"Pretoria","city":"Cape Town","continent":"Africa"},
+  {"name":"Nigeria","cc":"ng","capital":"Abuja","city":"Lagos","continent":"Africa"},
+  {"name":"Egypt","cc":"eg","capital":"Cairo","city":"Cairo","continent":"Africa"},
+  {"name":"Kenya","cc":"ke","capital":"Nairobi","city":"Nairobi","continent":"Africa"},
+  {"name":"Morocco","cc":"ma","capital":"Rabat","city":"Casablanca","continent":"Africa"},
+  {"name":"Ethiopia","cc":"et","capital":"Addis Ababa","city":"Addis Ababa","continent":"Africa"},
+  {"name":"Ghana","cc":"gh","capital":"Accra","city":"Accra","continent":"Africa"},
+  {"name":"Algeria","cc":"dz","capital":"Algiers","city":"Algiers","continent":"Africa"},
+  {"name":"Angola","cc":"ao","capital":"Luanda","city":"Luanda","continent":"Africa"},
+  {"name":"Senegal","cc":"sn","capital":"Dakar","city":"Dakar","continent":"Africa"},
+  {"name":"Tunisia","cc":"tn","capital":"Tunis","city":"Tunis","continent":"Africa"},
+  {"name":"Rwanda","cc":"rw","capital":"Kigali","city":"Kigali","continent":"Africa"}
+]

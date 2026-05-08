@@ -1,0 +1,14 @@
+[
+  {"name":"Japan","cc":"jp","capital":"Tokyo","city":"Tokyo","continent":"Asia"},
+  {"name":"China","cc":"cn","capital":"Beijing","city":"Shanghai","continent":"Asia"},
+  {"name":"India","cc":"in","capital":"New Delhi","city":"Mumbai","continent":"Asia"},
+  {"name":"South Korea","cc":"kr","capital":"Seoul","city":"Seoul","continent":"Asia"},
+  {"name":"Thailand","cc":"th","capital":"Bangkok","city":"Bangkok","continent":"Asia"},
+  {"name":"Vietnam","cc":"vn","capital":"Hanoi","city":"Ho Chi Minh City","continent":"Asia"},
+  {"name":"Indonesia","cc":"id","capital":"Jakarta","city":"Jakarta","continent":"Asia"},
+  {"name":"Malaysia","cc":"my","capital":"Kuala Lumpur","city":"Kuala Lumpur","continent":"Asia"},
+  {"name":"Philippines","cc":"ph","capital":"Manila","city":"Manila","continent":"Asia"},
+  {"name":"Saudi Arabia","cc":"sa","capital":"Riyadh","city":"Riyadh","continent":"Asia"},
+  {"name":"Turkey","cc":"tr","capital":"Ankara","city":"Istanbul","continent":"Asia"},
+  {"name":"Nepal","cc":"np","capital":"Kathmandu","city":"Kathmandu","continent":"Asia"}
+]

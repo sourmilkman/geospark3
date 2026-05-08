@@ -1,0 +1,12 @@
+[
+  {"name":"Brazil","cc":"br","capital":"Brasilia","city":"Rio de Janeiro","continent":"South America"},
+  {"name":"Argentina","cc":"ar","capital":"Buenos Aires","city":"Buenos Aires","continent":"South America"},
+  {"name":"Chile","cc":"cl","capital":"Santiago","city":"Santiago","continent":"South America"},
+  {"name":"Peru","cc":"pe","capital":"Lima","city":"Lima","continent":"South America"},
+  {"name":"Colombia","cc":"co","capital":"Bogota","city":"Bogota","continent":"South America"},
+  {"name":"Ecuador","cc":"ec","capital":"Quito","city":"Quito","continent":"South America"},
+  {"name":"Uruguay","cc":"uy","capital":"Montevideo","city":"Montevideo","continent":"South America"},
+  {"name":"Paraguay","cc":"py","capital":"Asuncion","city":"Asuncion","continent":"South America"},
+  {"name":"Bolivia","cc":"bo","capital":"Sucre","city":"La Paz","continent":"South America"},
+  {"name":"Venezuela","cc":"ve","capital":"Caracas","city":"Caracas","continent":"South America"}
+]

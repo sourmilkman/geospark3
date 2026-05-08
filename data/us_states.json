@@ -1,0 +1,14 @@
+[
+  {"name":"California","cc":"us-ca","capital":"Sacramento","city":"Los Angeles","continent":"US States"},
+  {"name":"Texas","cc":"us-tx","capital":"Austin","city":"Houston","continent":"US States"},
+  {"name":"Florida","cc":"us-fl","capital":"Tallahassee","city":"Miami","continent":"US States"},
+  {"name":"New York","cc":"us-ny","capital":"Albany","city":"New York City","continent":"US States"},
+  {"name":"Illinois","cc":"us-il","capital":"Springfield","city":"Chicago","continent":"US States"},
+  {"name":"Pennsylvania","cc":"us-pa","capital":"Harrisburg","city":"Philadelphia","continent":"US States"},
+  {"name":"Ohio","cc":"us-oh","capital":"Columbus","city":"Cleveland","continent":"US States"},
+  {"name":"Georgia","cc":"us-ga","capital":"Atlanta","city":"Atlanta","continent":"US States"},
+  {"name":"Michigan","cc":"us-mi","capital":"Lansing","city":"Detroit","continent":"US States"},
+  {"name":"Washington","cc":"us-wa","capital":"Olympia","city":"Seattle","continent":"US States"},
+  {"name":"Arizona","cc":"us-az","capital":"Phoenix","city":"Phoenix","continent":"US States"},
+  {"name":"Colorado","cc":"us-co","capital":"Denver","city":"Denver","continent":"US States"}
+]

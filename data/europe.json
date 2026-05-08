@@ -1,0 +1,14 @@
+[
+  {"name":"France","cc":"fr","capital":"Paris","city":"Paris","continent":"Europe"},
+  {"name":"Germany","cc":"de","capital":"Berlin","city":"Berlin","continent":"Europe"},
+  {"name":"Italy","cc":"it","capital":"Rome","city":"Rome","continent":"Europe"},
+  {"name":"Spain","cc":"es","capital":"Madrid","city":"Madrid","continent":"Europe"},
+  {"name":"United Kingdom","cc":"gb","capital":"London","city":"London","continent":"Europe"},
+  {"name":"Ireland","cc":"ie","capital":"Dublin","city":"Dublin","continent":"Europe"},
+  {"name":"Norway","cc":"no","capital":"Oslo","city":"Oslo","continent":"Europe"},
+  {"name":"Sweden","cc":"se","capital":"Stockholm","city":"Stockholm","continent":"Europe"},
+  {"name":"Greece","cc":"gr","capital":"Athens","city":"Athens","continent":"Europe"},
+  {"name":"Poland","cc":"pl","capital":"Warsaw","city":"Warsaw","continent":"Europe"},
+  {"name":"Portugal","cc":"pt","capital":"Lisbon","city":"Lisbon","continent":"Europe"},
+  {"name":"Netherlands","cc":"nl","capital":"Amsterdam","city":"Amsterdam","continent":"Europe"}
+]

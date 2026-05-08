@@ -1,57 +1,30 @@
-# 🌍 GeoSpark
+# GeoSpark 3
 
-**Geography trivia that learns you.**
+GeoSpark is now a multi-mode mobile-first geography progression game.
 
-An installable PWA geography quiz game with adaptive difficulty, multiple game stages, and a self-improving learning system.
+## Modes
 
-## Features
+- Journey: campaign progression through 6 cumulative stages.
+- Challenge: timed arcade play, unlocked from the start.
+- Zen: no timer, no lives, no game over. Unlock by completing Stage 3 or spending 5,000 AirMiles.
 
-- **7 Game Stages** that unlock as you level up:
-  - 🏳️ **Flags** (Level 1) — Identify countries by flag and vice versa
-  - 🏛️ **Capitals** (Level 5) — Match countries to capitals
-  - 🌍 **Continents** (Level 10) — Place countries on the right continent
-  - 🌍 **African Countries** (Level 15) — Deep dive into African flags and capitals
-  - 🔍 **Lesser Known** (Level 20) — Obscure countries from every continent
-  - 🗺️ **Maps** (Level 25) — Tap countries on interactive continent maps
-  - 🇺🇸 **US States** (Level 30) — Tap states and Canadian provinces on maps
+## Progression
 
-- **Adaptive Difficulty** — The game tracks which countries you struggle with and serves them more often. Mastered countries fade to the background. Timer shrinks as you level up. Higher levels use same-continent distractors.
+1. Europe
+2. South America + Europe
+3. Asia + Europe + South America
+4. US States + all previous
+5. Africa + all previous
+6. Global Master
 
-- **87 Countries** across 6 difficulty tiers with inline SVG flags (PC) or native emoji flags (mobile)
+## Persistence
 
-- **Sound Effects** — Web Audio API synthesized sounds for taps, correct/wrong answers, timeouts, level-ups, and game over
+The passport is stored in `localStorage` under `geospark3.passport` and tracks name, archetype, stages, stamps, currencies, unlocks, and high score.
 
-- **Learning Page** — Browse all countries grouped by continent with flags and capitals
+## Data
 
-- **Debug Tools** — Admin panel with passcode-protected level jumping for testing
+Geography content is modular JSON in `data/`, so stage pools can be extended without changing the mode controller.
 
-- **PWA** — Installable as a standalone app with offline support via service worker
+## PWA
 
-## How to Play
-
-Open `index.html` in any modern browser. Works on both desktop and mobile.
-
-To install as a PWA, serve over HTTPS (e.g. via [Netlify Drop](https://app.netlify.com/drop)) and use "Add to Home Screen".
-
-## Admin Codes
-
-Access via Learn page → Debug Tools:
-
-| Code | Level |
-|------|-------|
-| `0005` | Level 5 (Capitals) |
-| `0010` | Level 10 (Continents) |
-| `0015` | Level 15 (African Countries) |
-| `0020` | Level 20 (Lesser Known) |
-| `0025` | Level 25 (Maps) |
-| `0030` | Level 30 (US States) |
-| `1337` | All levels |
-
-## Tech
-
-- Single HTML game shell, zero dependencies
-- Inline SVG flags for cross-platform rendering
-- Web Audio API for sound synthesis
-- `requestAnimationFrame` timer for smooth performance
-- `localStorage` for player profile persistence
-- PWA manifest and same-origin service worker
+The app includes a standalone portrait manifest, supplied 192/512 icons, and a service worker that caches the shell plus JSON geography data for offline play.
