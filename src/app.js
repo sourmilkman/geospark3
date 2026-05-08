@@ -15,6 +15,9 @@ const STAGES = [
 
 const DATA_FILES = ["europe", "south_america", "asia", "us_states", "africa", "global"];
 const QUESTION_TYPES = ["flag", "capital", "city"];
+const QUESTION_TIME_MS = 18000;
+const CHALLENGE_TIME_MS = 60000;
+const TIMER_CIRCUMFERENCE = 2 * Math.PI * 18;
 
 const $ = (id) => document.getElementById(id);
 const onPress = (el, fn) => el.addEventListener("pointerup", (event) => {
@@ -25,6 +28,8 @@ const onPress = (el, fn) => el.addEventListener("pointerup", (event) => {
 let passport = loadPassport();
 let geoData = {};
 let globeRaf = 0;
+let audioReady = false;
+let audioCtx = null;
 
 const state = {
   view: "boot",
@@ -36,6 +41,7 @@ const state = {
   streak: 0,
   lives: 3,
   timerMs: 0,
+  timerMaxMs: 0,
   timerEndsAt: 0,
   timerRaf: 0,
   levelProgress: 0,
@@ -107,6 +113,53 @@ function haptic(kind) {
   if (kind === "wrong") navigator.vibrate([35, 45, 35]);
 }
 
+function unlockAudio() {
+  if (audioReady) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioReady = true;
+  } catch (_) {
+    audioReady = false;
+  }
+}
+
+function playTone(frequency, duration, type = "sine", gain = 0.08, delay = 0) {
+  if (!audioReady || !audioCtx) return;
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  const start = audioCtx.currentTime + delay;
+  const oscillator = audioCtx.createOscillator();
+  const volume = audioCtx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  volume.gain.setValueAtTime(gain, start);
+  volume.gain.exponentialRampToValueAtTime(0.001, start + duration);
+  oscillator.connect(volume);
+  volume.connect(audioCtx.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration);
+}
+
+const Sound = {
+  tap() {
+    playTone(620, 0.08, "sine", 0.07);
+    playTone(880, 0.08, "sine", 0.04, 0.025);
+  },
+  correct() {
+    [523, 659, 784].forEach((freq, index) => playTone(freq, 0.18, "sine", 0.08, index * 0.07));
+  },
+  wrong() {
+    playTone(300, 0.14, "square", 0.06);
+    playTone(240, 0.18, "square", 0.05, 0.11);
+  },
+  timeout() {
+    playTone(420, 0.22, "triangle", 0.07);
+    playTone(220, 0.24, "triangle", 0.05, 0.17);
+  },
+  levelUp() {
+    [523, 659, 784, 1047].forEach((freq, index) => playTone(freq, 0.2, "sine", 0.07, index * 0.08));
+  },
+};
+
 function renderMenu() {
   $("menu-name").textContent = passport.name || "Explorer";
   $("menu-stage").textContent = currentStage().name;
@@ -147,6 +200,7 @@ function startMode(mode) {
     return;
   }
   stopTimer();
+  Sound.tap();
   Object.assign(state, {
     mode,
     running: true,
@@ -155,11 +209,14 @@ function startMode(mode) {
     score: 0,
     streak: 0,
     lives: mode === "journey" ? 3 : mode === "challenge" ? 3 : Infinity,
-    timerMs: mode === "challenge" ? 60000 : mode === "journey" ? 18000 : 0,
+    timerMs: mode === "challenge" ? CHALLENGE_TIME_MS : mode === "journey" ? QUESTION_TIME_MS : 0,
+    timerMaxMs: mode === "challenge" ? CHALLENGE_TIME_MS : mode === "journey" ? QUESTION_TIME_MS : 0,
     levelProgress: 0,
     recent: [],
   });
   $("game-screen").classList.toggle("zen-mode", mode === "zen");
+  $("game-screen").classList.remove("paused");
+  $("pause-overlay").classList.add("hidden");
   $("journey-progress-track").classList.toggle("hidden", mode !== "journey");
   $("tool-row").classList.toggle("hidden", mode !== "journey");
   $("hud-mode").textContent = mode === "journey" ? `Journey · ${currentStage().name}` : mode === "challenge" ? "Challenge" : "Zen";
@@ -233,7 +290,10 @@ function pickQuestion() {
 
 function nextQuestion() {
   if (!state.running) return;
-  if (state.mode === "journey") state.timerMs = 18000;
+  if (state.mode === "journey") {
+    state.timerMs = QUESTION_TIME_MS;
+    state.timerMaxMs = QUESTION_TIME_MS;
+  }
   state.question = pickQuestion();
   renderQuestion();
   updateHud();
@@ -248,7 +308,8 @@ function renderQuestion() {
   $("zen-title").classList.toggle("hidden", state.mode !== "zen");
   $("zen-title").textContent = state.mode === "zen" ? q.answer.name : "";
 
-  $("flag-display").innerHTML = q.flag ? `<img src="${flagUrl(q.flag)}" alt="">` : `<div class="brand-title">GS</div>`;
+  $("flag-display").classList.toggle("empty", !q.flag);
+  $("flag-display").innerHTML = q.flag ? `<img src="${flagUrl(q.flag)}" alt="">` : "";
   $("answer-grid").innerHTML = q.options.map((option) => `<button class="answer-btn" type="button" data-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("");
   document.querySelectorAll(".answer-btn").forEach((button) => onPress(button, () => answerQuestion(button.dataset.answer, button)));
   $("feedback-line").textContent = "";
@@ -259,13 +320,14 @@ function answerQuestion(value, button) {
   stopTimer();
   const q = state.question;
   const correct = value === q.correct;
-  button.classList.add(correct ? "correct" : "wrong");
+  if (button.classList) button.classList.add(correct ? "correct" : "wrong");
   document.querySelectorAll(".answer-btn").forEach((btn) => {
     btn.disabled = true;
     if (btn.dataset.answer === q.correct) btn.classList.add("correct");
   });
 
   if (correct) {
+    Sound.correct();
     haptic("spark");
     state.streak += 1;
     state.score += 100 + (state.streak * 10);
@@ -276,6 +338,7 @@ function answerQuestion(value, button) {
     $("feedback-line").textContent = `Sparked ${q.answer.name}`;
     checkProgression();
   } else {
+    Sound.wrong();
     haptic("wrong");
     state.streak = 0;
     state.lives -= 1;
@@ -316,6 +379,7 @@ function completeStage() {
   } else {
     passport.journey.level = getArchetype().levelsPerStage;
   }
+  Sound.levelUp();
   $("hud-mode").textContent = `Journey · ${currentStage().name}`;
 }
 
@@ -350,16 +414,25 @@ function updateHud() {
   }
   $("auto-correct-btn").disabled = passport.currencies.geoSparks < 25;
   $("skip-level-btn").disabled = passport.currencies.airMiles < 250;
+  $("timer-text").textContent = Math.ceil(state.timerMs / 1000);
+  const ratio = state.timerMaxMs ? Math.max(0, Math.min(1, state.timerMs / state.timerMaxMs)) : 0;
+  $("timer-fill").style.strokeDashoffset = `${((1 - ratio) * TIMER_CIRCUMFERENCE).toFixed(1)}`;
+  $("timer-chip").classList.toggle("danger", state.timerMs <= 5000 && state.mode !== "zen");
+  $("lives-text").textContent = state.mode === "challenge" || state.mode === "journey"
+    ? "♥".repeat(Math.max(0, state.lives))
+    : "";
 }
 
 function startTimer() {
   stopTimer();
+  state.timerMaxMs = state.timerMaxMs || state.timerMs;
   state.timerEndsAt = performance.now() + state.timerMs;
   const tick = (now) => {
     if (!state.running || state.paused) return;
     state.timerMs = Math.max(0, state.timerEndsAt - now);
     updateHud();
     if (state.timerMs <= 0) {
+      Sound.timeout();
       if (state.mode === "challenge") finishRun("Time up");
       else answerQuestion("__timeout__", document.createElement("button"));
       return;
@@ -371,6 +444,25 @@ function startTimer() {
 
 function stopTimer() {
   cancelAnimationFrame(state.timerRaf);
+}
+
+function pauseGame() {
+  if (!state.running || state.mode === "zen" || state.paused) return;
+  Sound.tap();
+  state.timerMs = Math.max(0, state.timerEndsAt - performance.now());
+  state.paused = true;
+  stopTimer();
+  $("game-screen").classList.add("paused");
+  $("pause-overlay").classList.remove("hidden");
+}
+
+function resumeGame() {
+  if (!state.paused) return;
+  Sound.tap();
+  state.paused = false;
+  $("game-screen").classList.remove("paused");
+  $("pause-overlay").classList.add("hidden");
+  startTimer();
 }
 
 function finishRun(reason) {
@@ -389,6 +481,9 @@ function finishRun(reason) {
 function backToMenu() {
   stopTimer();
   state.running = false;
+  state.paused = false;
+  $("game-screen").classList.remove("paused");
+  $("pause-overlay").classList.add("hidden");
   renderMenu();
   setScreen("menu-screen");
 }
@@ -469,6 +564,8 @@ function stopGlobe() {
 
 function wireEvents() {
   document.querySelectorAll(".choice-card").forEach((button) => onPress(button, () => {
+    unlockAudio();
+    Sound.tap();
     document.querySelectorAll(".choice-card").forEach((item) => item.classList.remove("selected"));
     button.classList.add("selected");
   }));
@@ -477,10 +574,12 @@ function wireEvents() {
   onPress($("challenge-btn"), () => startMode("challenge"));
   onPress($("zen-btn"), () => startMode("zen"));
   onPress($("back-menu-btn"), backToMenu);
+  onPress($("pause-btn"), pauseGame);
+  onPress($("resume-btn"), resumeGame);
   onPress($("result-menu-btn"), backToMenu);
   onPress($("auto-correct-btn"), autoCorrect);
   onPress($("skip-level-btn"), skipLevel);
-  document.addEventListener("pointerdown", () => {}, { once: true });
+  document.addEventListener("pointerdown", unlockAudio, { once: true });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stopTimer();
     else if (state.running && state.mode !== "zen") startTimer();

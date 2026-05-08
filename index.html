@@ -84,8 +84,20 @@
           <div class="hud-mode" id="hud-mode">Journey</div>
           <div class="progress-track" id="journey-progress-track"><div id="journey-progress-fill"></div></div>
         </div>
-        <div class="hud-stats" id="hud-stats"></div>
+        <button class="icon-btn pause-control" id="pause-btn" type="button" aria-label="Pause game">Ⅱ</button>
       </header>
+
+      <div class="status-row" id="status-row">
+        <div class="timer-chip" id="timer-chip">
+          <svg viewBox="0 0 44 44" aria-hidden="true">
+            <circle class="timer-track" cx="22" cy="22" r="18"></circle>
+            <circle class="timer-fill" id="timer-fill" cx="22" cy="22" r="18"></circle>
+          </svg>
+          <span id="timer-text">18</span>
+        </div>
+        <div class="hud-stats" id="hud-stats"></div>
+        <div class="lives-chip" id="lives-chip" aria-label="Lives"><span id="lives-text">♥♥♥</span></div>
+      </div>
 
       <div class="zen-title hidden" id="zen-title"></div>
 
@@ -104,6 +116,14 @@
       </div>
 
       <div class="feedback-line" id="feedback-line"></div>
+
+      <div class="pause-overlay hidden" id="pause-overlay">
+        <div class="pause-panel">
+          <h2>Paused</h2>
+          <p>The timer is frozen.</p>
+          <button class="primary-btn" id="resume-btn" type="button">Resume</button>
+        </div>
+      </div>
     </section>
 
     <section class="screen result-screen hidden" id="result-screen">
