@@ -2,7 +2,7 @@
 
 GeoSpark is now a multi-mode mobile-first geography progression game.
 
-Current game version: `0.3.2`
+Current game version: `0.4.0`
 
 ## Versioning
 
@@ -12,6 +12,7 @@ Each gameplay/content update should bump `APP_VERSION` in `src/app.js`, the visi
 
 - Journey: campaign progression through 6 cumulative stages.
 - Challenge: timed arcade play, unlocked from the start.
+- Learning: reference mode for browsing flags, capitals, cities, and regions.
 - Zen: no timer, no lives, no game over. Unlock by completing Stage 3 or spending 5,000 AirMiles.
 
 ## Progression

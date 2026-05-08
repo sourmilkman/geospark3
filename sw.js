@@ -1,4 +1,4 @@
-const CACHE_NAME = 'geospark3-v0.3.2';
+const CACHE_NAME = 'geospark3-v0.4.0';
 const APP_SHELL = [
   './',
   './index.html',

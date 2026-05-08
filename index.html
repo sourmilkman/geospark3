@@ -45,37 +45,56 @@
     <section class="screen menu-screen hidden" id="menu-screen" aria-labelledby="menu-title">
       <header class="menu-header">
         <div>
-          <div class="eyebrow">Passport</div>
-          <h1 id="menu-title">Welcome, <span id="menu-name">Explorer</span></h1>
+          <div class="eyebrow">Main Menu</div>
+          <h1 id="menu-title">GeoSpark</h1>
+          <p class="menu-player">Passport: <span id="menu-name">Explorer</span></p>
         </div>
         <img class="mini-mark" src="icon-192.png" alt="">
       </header>
 
-      <div class="globe-shell" aria-hidden="true">
-        <canvas id="globe-canvas" width="320" height="320"></canvas>
-        <div class="gs-core">GS</div>
+      <div class="menu-hero">
+        <div class="globe-shell" aria-hidden="true">
+          <canvas id="globe-canvas" width="320" height="320"></canvas>
+          <div class="gs-core">GS</div>
+        </div>
+        <div class="passport-strip">
+          <div><span id="menu-stage">Europe</span><small>Current Stage</small></div>
+          <div><span id="menu-sparks">0</span><small>GeoSparks</small></div>
+          <div><span id="menu-airmiles">0</span><small>AirMiles</small></div>
+        </div>
       </div>
 
-      <div class="passport-strip">
-        <div><span id="menu-stage">Europe</span><small>Stage</small></div>
-        <div><span id="menu-sparks">0</span><small>GeoSparks</small></div>
-        <div><span id="menu-airmiles">0</span><small>AirMiles</small></div>
-      </div>
-
+      <div class="section-label">Choose Mode</div>
       <div class="mode-list">
-        <button class="mode-btn" id="journey-btn" type="button">
-          <span>Journey</span><small>Campaign progression</small>
+        <button class="mode-btn primary-mode" id="journey-btn" type="button">
+          <span><b>Journey</b><small>Campaign progression</small></span><strong>Start</strong>
         </button>
         <button class="mode-btn" id="challenge-btn" type="button">
-          <span>Challenge</span><small>Timed arcade run</small>
+          <span><b>Challenge</b><small>Timed arcade run</small></span><strong>Play</strong>
+        </button>
+        <button class="mode-btn" id="learning-btn" type="button">
+          <span><b>Learning</b><small>Flags, capitals, cities, regions</small></span><strong>Study</strong>
         </button>
         <button class="mode-btn locked" id="zen-btn" type="button">
-          <span id="zen-label">Zen Locked</span><small id="zen-copy">Complete Asia or buy for 5,000 AirMiles</small>
+          <span><b id="zen-label">Zen Locked</b><small id="zen-copy">Complete Asia or buy for 5,000 AirMiles</small></span><strong id="zen-action">Lock</strong>
         </button>
       </div>
 
+      <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.3.2</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.4.0</div>
+    </section>
+
+    <section class="screen learn-screen hidden" id="learn-screen" aria-labelledby="learn-title">
+      <header class="game-hud">
+        <button class="icon-btn" id="learn-back-btn" type="button" aria-label="Back to menu">Back</button>
+        <div class="hud-center">
+          <div class="hud-mode" id="learn-title">Learning</div>
+        </div>
+        <div class="learn-count" id="learn-count">0</div>
+      </header>
+      <div class="learn-tabs" id="learn-tabs"></div>
+      <div class="learn-list" id="learn-list"></div>
     </section>
 
     <section class="screen game-screen hidden" id="game-screen" aria-live="polite">
@@ -131,7 +150,7 @@
       <h1 id="result-title">Run Complete</h1>
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
-      <div class="version-label" id="result-version">GeoSpark v0.3.2</div>
+      <div class="version-label" id="result-version">GeoSpark v0.4.0</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>

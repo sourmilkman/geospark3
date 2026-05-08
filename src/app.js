@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.3.2";
+const APP_VERSION = "0.4.0";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -19,6 +19,16 @@ const QUESTION_TYPES = ["flag", "capital", "city"];
 const QUESTION_TIME_MS = 18000;
 const CHALLENGE_TIME_MS = 60000;
 const TIMER_CIRCUMFERENCE = 2 * Math.PI * 18;
+const LEARN_REGIONS = [
+  { id: "all", label: "All" },
+  { id: "Europe", label: "Europe" },
+  { id: "South America", label: "S. America" },
+  { id: "Asia", label: "Asia" },
+  { id: "US States", label: "US States" },
+  { id: "Africa", label: "Africa" },
+  { id: "North America", label: "N. America" },
+  { id: "Oceania", label: "Oceania" },
+];
 const EUROPE_TOP_HITS = new Set([
   "France",
   "Germany",
@@ -75,6 +85,7 @@ const state = {
   timerRaf: 0,
   levelProgress: 0,
   recent: [],
+  learnRegion: "all",
 };
 
 function defaultPassport() {
@@ -144,7 +155,7 @@ function allowedByDifficulty(item) {
 }
 
 function setScreen(id) {
-  ["boot-screen", "onboarding-screen", "menu-screen", "game-screen", "result-screen"].forEach((screenId) => {
+  ["boot-screen", "onboarding-screen", "menu-screen", "learn-screen", "game-screen", "result-screen"].forEach((screenId) => {
     $(screenId).classList.toggle("hidden", screenId !== id);
   });
   state.view = id;
@@ -222,6 +233,7 @@ function renderMenu() {
   $("zen-btn").classList.toggle("locked", !zenUnlocked);
   $("zen-label").textContent = zenUnlocked ? "Zen" : "Zen Locked";
   $("zen-copy").textContent = zenUnlocked ? "Stress-free sandbox" : "Complete Asia or buy for 5,000 AirMiles";
+  $("zen-action").textContent = zenUnlocked ? "Relax" : "Lock";
 
   $("stage-track").innerHTML = STAGES.map((stage) => {
     const isComplete = passport.journey.stamps.includes(stage.name);
@@ -229,6 +241,42 @@ function renderMenu() {
     const status = isComplete ? "complete" : isCurrent ? "current" : "";
     return `<div class="stage-pill ${status}"><strong>${stage.id}. ${stage.name}</strong><small>${isComplete ? "Stamped" : isCurrent ? "In progress" : "Locked ahead"}</small></div>`;
   }).join("");
+}
+
+function allLearningItems() {
+  return DATA_FILES
+    .flatMap((file) => geoData[file] || [])
+    .filter((item, index, list) => list.findIndex((other) => other.name === item.name && other.continent === item.continent) === index)
+    .sort((a, b) => a.continent.localeCompare(b.continent) || a.name.localeCompare(b.name));
+}
+
+function startLearning(region = state.learnRegion) {
+  Sound.tap();
+  state.learnRegion = region;
+  renderLearning();
+  setScreen("learn-screen");
+}
+
+function renderLearning() {
+  const items = allLearningItems().filter((item) => state.learnRegion === "all" || item.continent === state.learnRegion);
+  $("learn-count").textContent = items.length;
+  $("learn-tabs").innerHTML = LEARN_REGIONS.map((region) =>
+    `<button class="learn-tab ${region.id === state.learnRegion ? "active" : ""}" type="button" data-region="${escapeHtml(region.id)}">${escapeHtml(region.label)}</button>`
+  ).join("");
+  document.querySelectorAll(".learn-tab").forEach((button) => onPress(button, () => {
+    Sound.tap();
+    state.learnRegion = button.dataset.region;
+    renderLearning();
+  }));
+  $("learn-list").innerHTML = items.map((item) => `
+    <article class="learn-card">
+      <img src="${flagUrl(item.cc)}" alt="">
+      <div>
+        <b>${escapeHtml(item.name)}</b>
+        <span>${escapeHtml(item.capital)} · ${escapeHtml(item.city)} · ${escapeHtml(item.continent)}</span>
+      </div>
+    </article>
+  `).join("");
 }
 
 function selectedArchetype() {
@@ -567,48 +615,142 @@ function escapeHtml(value) {
 function startGlobe() {
   const canvas = $("globe-canvas");
   const ctx = canvas.getContext("2d");
-  const dots = Array.from({ length: 130 }, (_, index) => ({
-    lat: -70 + Math.random() * 140,
-    lon: (index * 47) % 360,
-    size: 1 + Math.random() * 1.8,
-  }));
+  const landmasses = [
+    [[-168, 58], [-142, 70], [-96, 72], [-54, 54], [-60, 28], [-86, 14], [-104, 20], [-126, 33], [-150, 48]],
+    [[-82, 12], [-64, 8], [-48, -10], [-56, -34], [-70, -56], [-80, -38], [-76, -18]],
+    [[-12, 36], [2, 54], [28, 60], [46, 48], [32, 36], [12, 38]],
+    [[-18, 33], [8, 36], [34, 28], [48, 4], [32, -34], [12, -35], [-6, -12], [-14, 12]],
+    [[34, 8], [44, 32], [70, 52], [112, 58], [148, 44], [142, 18], [106, 8], [78, 22], [58, 6]],
+    [[112, -12], [154, -18], [150, -38], [116, -43], [108, -28]],
+    [[-45, 72], [-24, 78], [-18, 62], [-42, 58]],
+  ];
+
+  function project(lon, lat, rotation, radius, cx, cy) {
+    const lambda = (lon + rotation) * Math.PI / 180;
+    const phi = lat * Math.PI / 180;
+    const x = radius * Math.cos(phi) * Math.sin(lambda);
+    const y = -radius * Math.sin(phi);
+    const z = Math.cos(phi) * Math.cos(lambda);
+    return { x: cx + x, y: cy + y, z };
+  }
+
+  function drawLongitude(rotation, lon, radius, cx, cy) {
+    ctx.beginPath();
+    let started = false;
+    for (let lat = -80; lat <= 80; lat += 4) {
+      const point = project(lon, lat, rotation, radius, cx, cy);
+      if (point.z <= 0) {
+        started = false;
+        continue;
+      }
+      if (!started) {
+        ctx.moveTo(point.x, point.y);
+        started = true;
+      } else {
+        ctx.lineTo(point.x, point.y);
+      }
+    }
+    ctx.stroke();
+  }
+
+  function drawLatitude(rotation, lat, radius, cx, cy) {
+    ctx.beginPath();
+    let started = false;
+    for (let lon = -180; lon <= 180; lon += 4) {
+      const point = project(lon, lat, rotation, radius, cx, cy);
+      if (point.z <= 0) {
+        started = false;
+        continue;
+      }
+      if (!started) {
+        ctx.moveTo(point.x, point.y);
+        started = true;
+      } else {
+        ctx.lineTo(point.x, point.y);
+      }
+    }
+    ctx.stroke();
+  }
+
+  function drawLand(rotation, radius, cx, cy) {
+    landmasses.forEach((shape) => {
+      ctx.beginPath();
+      let visiblePoints = 0;
+      shape.forEach(([lon, lat]) => {
+        const point = project(lon, lat, rotation, radius, cx, cy);
+        if (point.z <= -0.08) return;
+        if (visiblePoints === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+        visiblePoints += 1;
+      });
+      if (visiblePoints >= 3) {
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    });
+  }
+
   const render = (now) => {
     const width = canvas.width;
     const height = canvas.height;
     const radius = width * 0.38;
     const cx = width / 2;
     const cy = height / 2;
+    const rotation = now * 0.012;
     ctx.clearRect(0, 0, width, height);
-    const glow = ctx.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius);
-    glow.addColorStop(0, "#203f63");
-    glow.addColorStop(0.72, "#0d2740");
-    glow.addColorStop(1, "#07111e");
-    ctx.fillStyle = glow;
+
+    const ocean = ctx.createRadialGradient(cx - radius * 0.32, cy - radius * 0.36, radius * 0.1, cx, cy, radius);
+    ocean.addColorStop(0, "#245a86");
+    ocean.addColorStop(0.6, "#123b64");
+    ocean.addColorStop(1, "#07172b");
+    ctx.fillStyle = ocean;
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(77,171,247,0.26)";
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.clip();
+
+    ctx.strokeStyle = "rgba(166, 211, 255, 0.2)";
     ctx.lineWidth = 1;
-    for (let line = -60; line <= 60; line += 30) {
-      const y = cy + Math.sin(line * Math.PI / 180) * radius;
+    [-60, -30, 0, 30, 60].forEach((lat) => drawLatitude(rotation, lat, radius, cx, cy));
+    [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].forEach((lon) => drawLongitude(rotation, lon, radius, cx, cy));
+
+    ctx.fillStyle = "#38d9a9";
+    ctx.strokeStyle = "rgba(244, 247, 251, 0.24)";
+    ctx.lineWidth = 1.4;
+    drawLand(rotation, radius, cx, cy);
+
+    ctx.fillStyle = "rgba(255, 209, 102, 0.86)";
+    [[2, 48], [-3, 40], [12, 42], [18, 59], [-74, 41], [139, 36], [151, -34]].forEach(([lon, lat]) => {
+      const point = project(lon, lat, rotation, radius, cx, cy);
+      if (point.z <= 0) return;
+      ctx.globalAlpha = 0.35 + point.z * 0.65;
       ctx.beginPath();
-      ctx.ellipse(cx, y, radius * Math.cos(line * Math.PI / 180), radius * 0.12, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    dots.forEach((dot) => {
-      const lon = (dot.lon + now * 0.015) * Math.PI / 180;
-      const lat = dot.lat * Math.PI / 180;
-      const z = Math.cos(lat) * Math.cos(lon);
-      if (z < -0.12) return;
-      const x = cx + radius * Math.cos(lat) * Math.sin(lon);
-      const y = cy + radius * Math.sin(lat);
-      ctx.globalAlpha = 0.35 + Math.max(0, z) * 0.65;
-      ctx.fillStyle = dot.lat > 15 ? "#38d9a9" : dot.lat < -15 ? "#ffd166" : "#4dabf7";
-      ctx.beginPath();
-      ctx.arc(x, y, dot.size, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, 2.1, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
+    ctx.restore();
+
+    const rim = ctx.createRadialGradient(cx - radius * 0.25, cy - radius * 0.35, radius * 0.3, cx, cy, radius * 1.05);
+    rim.addColorStop(0, "rgba(255,255,255,0.16)");
+    rim.addColorStop(0.58, "rgba(255,255,255,0)");
+    rim.addColorStop(1, "rgba(0,0,0,0.46)");
+    ctx.fillStyle = rim;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(77, 171, 247, 0.44)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
     globeRaf = requestAnimationFrame(render);
   };
   stopGlobe();
@@ -629,8 +771,10 @@ function wireEvents() {
   onPress($("create-passport-btn"), createPassport);
   onPress($("journey-btn"), () => startMode("journey"));
   onPress($("challenge-btn"), () => startMode("challenge"));
+  onPress($("learning-btn"), () => startLearning("all"));
   onPress($("zen-btn"), () => startMode("zen"));
   onPress($("back-menu-btn"), backToMenu);
+  onPress($("learn-back-btn"), backToMenu);
   onPress($("pause-btn"), pauseGame);
   onPress($("resume-btn"), resumeGame);
   onPress($("result-menu-btn"), backToMenu);
