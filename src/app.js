@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.1";
+const APP_VERSION = "0.4.2";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -19,6 +19,9 @@ const QUESTION_TYPES = ["flag", "capital", "city"];
 const QUESTION_TIME_MS = 18000;
 const CHALLENGE_TIME_MS = 60000;
 const TIMER_CIRCUMFERENCE = 2 * Math.PI * 18;
+const MODE_START_DELAY_MS = 900;
+const STUDY_SUGGESTION_WINDOW_MS = 30000;
+const STUDY_SUGGESTION_WRONGS = 3;
 const LEARN_REGIONS = [
   { id: "all", label: "All" },
   { id: "Europe", label: "Europe" },
@@ -86,6 +89,9 @@ const state = {
   levelProgress: 0,
   recent: [],
   learnRegion: "all",
+  wrongTimes: [],
+  studySuggested: false,
+  launchTimer: 0,
 };
 
 function defaultPassport() {
@@ -155,7 +161,7 @@ function allowedByDifficulty(item) {
 }
 
 function setScreen(id) {
-  ["boot-screen", "onboarding-screen", "menu-screen", "learn-screen", "game-screen", "result-screen"].forEach((screenId) => {
+  ["boot-screen", "onboarding-screen", "menu-screen", "launch-screen", "learn-screen", "game-screen", "result-screen"].forEach((screenId) => {
     $(screenId).classList.toggle("hidden", screenId !== id);
   });
   state.view = id;
@@ -228,6 +234,12 @@ function renderMenu() {
   $("menu-stage").textContent = currentStage().name;
   $("menu-sparks").textContent = passport.currencies.geoSparks;
   $("menu-airmiles").textContent = passport.currencies.airMiles;
+  const hasJourneyProgress = passport.journey.stage > 1 || passport.journey.level > 1 || passport.journey.stamps.length > 0;
+  $("journey-label").textContent = hasJourneyProgress ? "Continue the Journey" : "Journey";
+  $("journey-copy").textContent = hasJourneyProgress
+    ? `Stage ${passport.journey.stage}: ${currentStage().name}`
+    : "Campaign progression";
+  $("journey-action").textContent = hasJourneyProgress ? "Continue" : "Start";
 
   const zenUnlocked = passport.unlocks.zen;
   $("zen-btn").classList.toggle("locked", !zenUnlocked);
@@ -299,8 +311,21 @@ function startMode(mode) {
     buyZenOrNudge();
     return;
   }
+  clearTimeout(state.launchTimer);
   stopTimer();
   Sound.tap();
+  const title = mode === "journey" ? (passport.journey.stage > 1 || passport.journey.level > 1 ? "Continue the Journey" : "Journey") : mode === "challenge" ? "Challenge" : "Zen";
+  $("launch-title").textContent = title;
+  $("launch-copy").textContent = mode === "journey"
+    ? `${currentStage().name} · Level ${passport.journey.level}`
+    : mode === "challenge"
+      ? "Timer armed. Deep breath."
+      : "No timer. No pressure.";
+  setScreen("launch-screen");
+  state.launchTimer = setTimeout(() => launchMode(mode), MODE_START_DELAY_MS);
+}
+
+function launchMode(mode) {
   Object.assign(state, {
     mode,
     running: true,
@@ -313,6 +338,8 @@ function startMode(mode) {
     timerMaxMs: mode === "challenge" ? CHALLENGE_TIME_MS : mode === "journey" ? QUESTION_TIME_MS : 0,
     levelProgress: 0,
     recent: [],
+    wrongTimes: [],
+    studySuggested: false,
   });
   $("game-screen").classList.toggle("zen-mode", mode === "zen");
   $("game-screen").classList.remove("paused");
@@ -447,7 +474,10 @@ function answerQuestion(value, button) {
     haptic("wrong");
     state.streak = 0;
     state.lives -= 1;
-    $("feedback-line").textContent = q.correct;
+    recordWrongBurst();
+    $("feedback-line").textContent = state.studySuggested
+      ? `${q.correct} · Learning mode may help before another run.`
+      : q.correct;
   }
 
   updateHud();
@@ -578,12 +608,16 @@ function finishRun(reason) {
   }
   savePassport();
   $("result-title").textContent = reason;
-  $("result-copy").textContent = state.mode === "challenge" ? `Best challenge score: ${passport.best.challenge}` : `Passport updated for ${passport.name}.`;
+  $("result-copy").textContent = state.studySuggested
+    ? "A few misses came close together. Spend a little time in Learning mode, then come back sharper."
+    : state.mode === "challenge" ? `Best challenge score: ${passport.best.challenge}` : `Passport updated for ${passport.name}.`;
   $("result-score").textContent = state.score;
+  $("result-learning-btn").classList.toggle("hidden", !state.studySuggested);
   setScreen("result-screen");
 }
 
 function backToMenu() {
+  clearTimeout(state.launchTimer);
   stopTimer();
   state.running = false;
   state.paused = false;
@@ -591,6 +625,16 @@ function backToMenu() {
   $("pause-overlay").classList.add("hidden");
   renderMenu();
   setScreen("menu-screen");
+}
+
+function recordWrongBurst() {
+  const now = Date.now();
+  state.wrongTimes = state.wrongTimes
+    .filter((time) => now - time <= STUDY_SUGGESTION_WINDOW_MS)
+    .concat(now);
+  if (state.wrongTimes.length >= STUDY_SUGGESTION_WRONGS) {
+    state.studySuggested = true;
+  }
 }
 
 function shuffle(items) {
@@ -789,6 +833,7 @@ function wireEvents() {
   onPress($("pause-btn"), pauseGame);
   onPress($("resume-btn"), resumeGame);
   onPress($("result-menu-btn"), backToMenu);
+  onPress($("result-learning-btn"), () => startLearning("all"));
   onPress($("auto-correct-btn"), autoCorrect);
   onPress($("skip-level-btn"), skipLevel);
   document.addEventListener("pointerdown", unlockAudio, { once: true });

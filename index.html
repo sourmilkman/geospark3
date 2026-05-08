@@ -67,7 +67,7 @@
       <div class="section-label">Choose Mode</div>
       <div class="mode-list">
         <button class="mode-btn primary-mode" id="journey-btn" type="button">
-          <span><b>Journey</b><small>Campaign progression</small></span><strong>Start</strong>
+          <span><b id="journey-label">Journey</b><small id="journey-copy">Campaign progression</small></span><strong id="journey-action">Start</strong>
         </button>
         <button class="mode-btn" id="challenge-btn" type="button">
           <span><b>Challenge</b><small>Timed arcade run</small></span><strong>Play</strong>
@@ -82,7 +82,16 @@
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.4.1</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.4.2</div>
+    </section>
+
+    <section class="screen launch-screen hidden" id="launch-screen">
+      <div class="launch-panel">
+        <div class="eyebrow">Preparing</div>
+        <h1 id="launch-title">Journey</h1>
+        <p id="launch-copy">Loading your next spark...</p>
+        <div class="launch-meter"><div></div></div>
+      </div>
     </section>
 
     <section class="screen learn-screen hidden" id="learn-screen" aria-labelledby="learn-title">
@@ -150,7 +159,8 @@
       <h1 id="result-title">Run Complete</h1>
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
-      <div class="version-label" id="result-version">GeoSpark v0.4.1</div>
+      <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
+      <div class="version-label" id="result-version">GeoSpark v0.4.2</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>
