@@ -131,6 +131,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(
 .pause-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-family:'DM Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .pause-btn:active{transform:scale(.95);}
 .pause-btn:disabled{opacity:.4;pointer-events:none;}
+.pause-btn.pause-btn-hidden{visibility:hidden;opacity:0;pointer-events:none;}
 
 /* LEVEL BAR */
 .lvl-wrap{padding:0 16px 8px;flex-shrink:0;z-index:2;position:relative;}
@@ -344,7 +345,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(
 <!-- HEADER -->
 <div class="header">
 <div class="logo">GeoSpark</div>
-<button class="pause-btn hidden" id="pause-btn" aria-label="Pause game">II</button>
+<button class="pause-btn pause-btn-hidden" id="pause-btn" aria-label="Pause game">II</button>
 <div class="hdr-stats">
 <div class="st"><span>🔥</span><span class="v" id="streak">0</span></div>
 <div class="st"><span>⭐</span><span class="v" id="score">0</span></div>
@@ -1435,7 +1436,7 @@ function updateHUD(){
 // TIMER
 // ═══════════════════════════════════════
 function setPauseVisible(visible){
-  DOM.pauseBtn.classList.toggle('hidden',!visible);
+  DOM.pauseBtn.classList.toggle('pause-btn-hidden',!visible);
   DOM.pauseBtn.disabled=!visible||S.answered||S.paused;
 }
 
