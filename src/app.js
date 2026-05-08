@@ -1,4 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
+const APP_VERSION = "0.3.0";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -162,6 +163,8 @@ const Sound = {
 
 function renderMenu() {
   $("menu-name").textContent = passport.name || "Explorer";
+  $("menu-version").textContent = `GeoSpark v${APP_VERSION}`;
+  $("result-version").textContent = `GeoSpark v${APP_VERSION}`;
   $("menu-stage").textContent = currentStage().name;
   $("menu-sparks").textContent = passport.currencies.geoSparks;
   $("menu-airmiles").textContent = passport.currencies.airMiles;

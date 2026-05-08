@@ -2,6 +2,12 @@
 
 GeoSpark is now a multi-mode mobile-first geography progression game.
 
+Current game version: `0.3.0`
+
+## Versioning
+
+Each gameplay/content update should bump `APP_VERSION` in `src/app.js`, the visible labels in `index.html`, and the service worker `CACHE_NAME` in `sw.js`.
+
 ## Modes
 
 - Journey: campaign progression through 6 cumulative stages.
