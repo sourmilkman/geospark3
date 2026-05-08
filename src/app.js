@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "0.3.1";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },

@@ -442,6 +442,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(18, 26, 44, 0.92);
+  min-height: 206px;
   padding: 16px;
   text-align: center;
 }
@@ -455,15 +456,15 @@ h1 {
 }
 
 .flag-display {
-  min-height: 84px;
+  height: 84px;
   display: grid;
   place-items: center;
   margin: 8px 0;
 }
 
 .flag-display.empty {
-  min-height: 0;
-  margin: 0;
+  height: 84px;
+  margin: 8px 0;
 }
 
 .flag-display img {
@@ -576,8 +577,9 @@ h1 {
 
 @media (max-height: 680px) {
   .globe-shell { width: min(54vw, 230px); }
-  .question-panel { padding: 12px; }
-  .flag-display { min-height: 64px; }
+  .question-panel { min-height: 178px; padding: 12px; }
+  .flag-display,
+  .flag-display.empty { height: 64px; }
   .flag-display img { width: 76px; }
   .answer-btn { min-height: 46px; }
 }
