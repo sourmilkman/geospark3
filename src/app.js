@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.0";
+const APP_VERSION = "0.4.1";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -376,7 +376,7 @@ function pickQuestion() {
       badge: "City to Territory",
       prompt: answer.city,
       subtitle: "Where would you find this city?",
-      flag: null,
+      flag: answer.cc,
       options: shuffle([answer.name, ...wrongs.map((item) => item.name)]),
     };
   }
@@ -615,6 +615,16 @@ function escapeHtml(value) {
 function startGlobe() {
   const canvas = $("globe-canvas");
   const ctx = canvas.getContext("2d");
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const width = Math.max(640, Math.round(rect.width * dpr));
+    const height = Math.max(640, Math.round(rect.height * dpr));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+  }
   const landmasses = [
     [[-168, 58], [-142, 70], [-96, 72], [-54, 54], [-60, 28], [-86, 14], [-104, 20], [-126, 33], [-150, 48]],
     [[-82, 12], [-64, 8], [-48, -10], [-56, -34], [-70, -56], [-80, -38], [-76, -18]],
@@ -692,6 +702,7 @@ function startGlobe() {
   }
 
   const render = (now) => {
+    resizeCanvas();
     const width = canvas.width;
     const height = canvas.height;
     const radius = width * 0.38;
