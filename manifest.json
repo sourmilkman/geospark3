@@ -1,7 +1,7 @@
 {
   "name": "GeoSpark 3",
   "short_name": "GeoSpark",
-  "id": "/geospark3/?v=0.3.1",
+  "id": "/geospark3/?v=0.3.2",
   "description": "A multi-mode geography progression game.",
   "start_url": "/geospark3/",
   "scope": "/geospark3/",

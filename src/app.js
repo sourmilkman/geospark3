@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.3.1";
+const APP_VERSION = "0.3.2";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -19,6 +19,34 @@ const QUESTION_TYPES = ["flag", "capital", "city"];
 const QUESTION_TIME_MS = 18000;
 const CHALLENGE_TIME_MS = 60000;
 const TIMER_CIRCUMFERENCE = 2 * Math.PI * 18;
+const EUROPE_TOP_HITS = new Set([
+  "France",
+  "Germany",
+  "Italy",
+  "Spain",
+  "United Kingdom",
+  "Ireland",
+  "Netherlands",
+  "Portugal",
+  "Greece",
+  "Sweden",
+  "Norway",
+  "Poland",
+]);
+const EUROPE_CORE = new Set([
+  ...EUROPE_TOP_HITS,
+  "Austria",
+  "Belgium",
+  "Croatia",
+  "Czechia",
+  "Denmark",
+  "Finland",
+  "Hungary",
+  "Iceland",
+  "Romania",
+  "Switzerland",
+  "Ukraine",
+]);
 
 const $ = (id) => document.getElementById(id);
 const onPress = (el, fn) => el.addEventListener("pointerup", (event) => {
@@ -92,6 +120,27 @@ function currentStage() {
 function poolForStage(stageId = passport.journey.stage) {
   const stage = STAGES.find((item) => item.id === stageId) || STAGES[0];
   return stage.files.flatMap((file) => geoData[file] || []);
+}
+
+function isCountry(item) {
+  return item.continent !== "US States" && !item.cc.includes("-");
+}
+
+function journeyDifficultyBand() {
+  if (state.mode !== "journey" || passport.journey.stage !== 1) return 3;
+  const levels = getArchetype().levelsPerStage;
+  const level = Math.max(1, passport.journey.level);
+  if (level <= Math.max(2, Math.ceil(levels * 0.3))) return 1;
+  if (level <= Math.max(4, Math.ceil(levels * 0.65))) return 2;
+  return 3;
+}
+
+function allowedByDifficulty(item) {
+  if (state.mode !== "journey" || passport.journey.stage !== 1 || item.continent !== "Europe") return true;
+  const band = journeyDifficultyBand();
+  if (band === 1) return EUROPE_TOP_HITS.has(item.name);
+  if (band === 2) return EUROPE_CORE.has(item.name);
+  return true;
 }
 
 function setScreen(id) {
@@ -239,19 +288,24 @@ function buyZenOrNudge() {
 }
 
 function questionPool() {
-  if (state.mode === "challenge") return poolForStage(6);
-  return poolForStage(passport.journey.stage);
+  const pool = state.mode === "challenge" ? poolForStage(6) : poolForStage(passport.journey.stage);
+  return pool.filter(allowedByDifficulty);
 }
 
 function pickQuestion() {
   const pool = questionPool();
+  const countryPool = pool.filter(isCountry);
   const eligible = pool.filter((item) => !state.recent.includes(item.name));
   const source = eligible.length >= 4 ? eligible : pool;
-  const answer = source[Math.floor(Math.random() * source.length)];
+  const type = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)];
+  const answerSource = type === "flag" ? source.filter(isCountry) : source;
+  const fallbackSource = type === "flag" ? countryPool : pool;
+  const answerPool = answerSource.length >= 4 ? answerSource : fallbackSource;
+  const answer = answerPool[Math.floor(Math.random() * answerPool.length)];
   state.recent.push(answer.name);
   if (state.recent.length > 8) state.recent.shift();
-  const wrongs = shuffle(pool.filter((item) => item.name !== answer.name)).slice(0, 3);
-  const type = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)];
+  const distractorPool = type === "flag" ? countryPool : pool;
+  const wrongs = shuffle(distractorPool.filter((item) => item.name !== answer.name)).slice(0, 3);
 
   if (type === "capital") {
     return {
