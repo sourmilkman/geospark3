@@ -2,7 +2,7 @@
 
 GeoSpark is now a multi-mode mobile-first geography progression game.
 
-Current game version: `0.4.4`
+Current game version: `0.4.5`
 
 ## Versioning
 
@@ -31,6 +31,8 @@ The passport is stored in `localStorage` under `geospark3.passport` and tracks n
 ## Data
 
 Geography content is modular JSON in `data/`, so stage pools can be extended without changing the mode controller.
+
+The full playable pool now targets 245 territories: 195 countries plus all 50 US states.
 
 ## PWA
 

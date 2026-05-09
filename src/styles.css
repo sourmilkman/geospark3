@@ -248,9 +248,9 @@ h1 {
 
 .globe-shell {
   position: relative;
-  width: min(52vw, 230px);
+  width: min(58vw, 270px);
   aspect-ratio: 1;
-  margin: -8px auto 4px;
+  margin: -10px auto 6px;
 }
 
 #globe-canvas {
@@ -815,7 +815,7 @@ h1 {
 }
 
 @media (max-height: 680px) {
-  .globe-shell { width: min(54vw, 230px); }
+  .globe-shell { width: min(60vw, 270px); }
   .question-panel { min-height: 178px; padding: 12px; }
   .flag-display,
   .flag-display.empty { height: 64px; }

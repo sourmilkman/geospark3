@@ -1,5 +1,12 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.4";
+const APP_VERSION = "0.4.5";
+const AUTO_CORRECT_COST = 50;
+const SKIP_LEVEL_COST = 750;
+const ZEN_UNLOCK_COST = 5000;
+const GEOSPARK_STREAK_INTERVAL = 5;
+const GEOSPARK_STREAK_REWARD = 3;
+const AIRMILES_LEVEL_REWARD = 25;
+const AIRMILES_STAGE_REWARD = 150;
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -251,7 +258,7 @@ function renderMenu() {
   const zenUnlocked = passport.unlocks.zen;
   $("zen-btn").classList.toggle("locked", !zenUnlocked);
   $("zen-label").textContent = zenUnlocked ? "Zen" : "Zen Locked";
-  $("zen-copy").textContent = zenUnlocked ? "Stress-free sandbox" : "Complete Asia or buy for 5,000 AirMiles";
+  $("zen-copy").textContent = zenUnlocked ? "Stress-free sandbox" : `Complete Asia or buy for ${ZEN_UNLOCK_COST.toLocaleString()} AirMiles`;
   $("zen-action").textContent = zenUnlocked ? "Relax" : "Lock";
 
   $("stage-track").innerHTML = STAGES.map((stage) => {
@@ -360,14 +367,14 @@ function launchMode(mode) {
 }
 
 function buyZenOrNudge() {
-  if (passport.currencies.airMiles >= 5000) {
-    passport.currencies.airMiles -= 5000;
+  if (passport.currencies.airMiles >= ZEN_UNLOCK_COST) {
+    passport.currencies.airMiles -= ZEN_UNLOCK_COST;
     passport.unlocks.zen = true;
     savePassport();
     renderMenu();
     return;
   }
-  $("zen-copy").textContent = `${5000 - passport.currencies.airMiles} more AirMiles needed, or complete Asia.`;
+  $("zen-copy").textContent = `${ZEN_UNLOCK_COST - passport.currencies.airMiles} more AirMiles needed, or complete Asia.`;
 }
 
 function questionPool() {
@@ -508,7 +515,9 @@ function answerQuestion(value, button) {
     state.score += 100 + (state.streak * 10);
     if (state.mode === "journey") {
       state.levelProgress += 1;
-      if (state.streak > 1 && state.streak % 3 === 0) passport.currencies.geoSparks += 10;
+      if (state.streak > 1 && state.streak % GEOSPARK_STREAK_INTERVAL === 0) {
+        passport.currencies.geoSparks += GEOSPARK_STREAK_REWARD;
+      }
     }
     $("feedback-line").textContent = `Sparked ${q.answer.name}`;
     checkProgression();
@@ -539,7 +548,7 @@ function checkProgression() {
   if (state.levelProgress < archetype.questionsPerLevel) return;
   state.levelProgress = 0;
   passport.journey.level += 1;
-  passport.currencies.airMiles += 100;
+  passport.currencies.airMiles += AIRMILES_LEVEL_REWARD;
 
   if (passport.journey.level > archetype.levelsPerStage) {
     completeStage();
@@ -549,7 +558,7 @@ function checkProgression() {
 function completeStage() {
   const completed = currentStage();
   if (!passport.journey.stamps.includes(completed.name)) passport.journey.stamps.push(completed.name);
-  passport.currencies.airMiles += 400;
+  passport.currencies.airMiles += AIRMILES_STAGE_REWARD;
   if (completed.id === 3) passport.unlocks.zen = true;
   if (completed.id < STAGES.length) {
     passport.journey.stage = completed.id + 1;
@@ -562,15 +571,15 @@ function completeStage() {
 }
 
 function autoCorrect() {
-  if (state.mode !== "journey" || passport.currencies.geoSparks < 25 || !state.question) return;
-  passport.currencies.geoSparks -= 25;
+  if (state.mode !== "journey" || passport.currencies.geoSparks < AUTO_CORRECT_COST || !state.question) return;
+  passport.currencies.geoSparks -= AUTO_CORRECT_COST;
   const target = [...document.querySelectorAll(".answer-btn")].find((btn) => btn.dataset.answer === state.question.correct);
   if (target) answerQuestion(target.dataset.answer, target);
 }
 
 function skipLevel() {
-  if (state.mode !== "journey" || passport.currencies.airMiles < 250) return;
-  passport.currencies.airMiles -= 250;
+  if (state.mode !== "journey" || passport.currencies.airMiles < SKIP_LEVEL_COST) return;
+  passport.currencies.airMiles -= SKIP_LEVEL_COST;
   state.levelProgress = getArchetype().questionsPerLevel;
   checkProgression();
   savePassport();
@@ -603,8 +612,8 @@ function updateHud() {
   } else {
     $("hud-stats").textContent = "";
   }
-  $("auto-correct-btn").disabled = passport.currencies.geoSparks < 25;
-  $("skip-level-btn").disabled = passport.currencies.airMiles < 250;
+  $("auto-correct-btn").disabled = passport.currencies.geoSparks < AUTO_CORRECT_COST;
+  $("skip-level-btn").disabled = passport.currencies.airMiles < SKIP_LEVEL_COST;
   $("timer-text").textContent = Math.ceil(state.timerMs / 1000);
   const ratio = state.timerMaxMs ? Math.max(0, Math.min(1, state.timerMs / state.timerMaxMs)) : 0;
   $("timer-fill").style.strokeDashoffset = `${((1 - ratio) * TIMER_CIRCUMFERENCE).toFixed(1)}`;
@@ -717,9 +726,9 @@ function startGlobe() {
   const ctx = canvas.getContext("2d");
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    const width = Math.max(640, Math.round(rect.width * dpr));
-    const height = Math.max(640, Math.round(rect.height * dpr));
+    const dpr = Math.min(window.devicePixelRatio || 1, 4);
+    const width = Math.max(1280, Math.round(rect.width * dpr));
+    const height = Math.max(1280, Math.round(rect.height * dpr));
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
@@ -734,6 +743,11 @@ function startGlobe() {
     [[112, -12], [154, -18], [150, -38], [116, -43], [108, -28]],
     [[-45, 72], [-24, 78], [-18, 62], [-42, 58]],
   ];
+  const islandDots = [
+    [-6, 53, 3.2], [-19, 65, 2.4], [14, 35, 1.8], [35, -20, 2], [47, -19, 2.7],
+    [73, 4, 1.5], [103, 1, 1.4], [121, 15, 2], [127, -8, 1.8], [174, -41, 2.3],
+    [-61, 15, 1.4], [-157, 21, 1.4], [-170, -14, 1.2], [178, -18, 1.1],
+  ];
 
   function project(lon, lat, rotation, radius, cx, cy) {
     const lambda = (lon + rotation) * Math.PI / 180;
@@ -747,7 +761,7 @@ function startGlobe() {
   function drawLongitude(rotation, lon, radius, cx, cy) {
     ctx.beginPath();
     let started = false;
-    for (let lat = -80; lat <= 80; lat += 4) {
+    for (let lat = -82; lat <= 82; lat += 2) {
       const point = project(lon, lat, rotation, radius, cx, cy);
       if (point.z <= 0) {
         started = false;
@@ -766,7 +780,7 @@ function startGlobe() {
   function drawLatitude(rotation, lat, radius, cx, cy) {
     ctx.beginPath();
     let started = false;
-    for (let lon = -180; lon <= 180; lon += 4) {
+    for (let lon = -180; lon <= 180; lon += 2) {
       const point = project(lon, lat, rotation, radius, cx, cy);
       if (point.z <= 0) {
         started = false;
@@ -825,15 +839,26 @@ function startGlobe() {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.strokeStyle = "rgba(166, 211, 255, 0.2)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(166, 211, 255, 0.16)";
+    ctx.lineWidth = Math.max(1, width / 1280);
     [-60, -30, 0, 30, 60].forEach((lat) => drawLatitude(rotation, lat, radius, cx, cy));
     [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].forEach((lon) => drawLongitude(rotation, lon, radius, cx, cy));
 
-    ctx.fillStyle = "#38d9a9";
+    ctx.fillStyle = "#35d49f";
     ctx.strokeStyle = "rgba(244, 247, 251, 0.24)";
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = Math.max(1.4, width / 980);
     drawLand(rotation, radius, cx, cy);
+
+    ctx.fillStyle = "#38d9a9";
+    islandDots.forEach(([lon, lat, size]) => {
+      const point = project(lon, lat, rotation, radius, cx, cy);
+      if (point.z <= 0) return;
+      ctx.globalAlpha = 0.42 + point.z * 0.58;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, Math.max(1.6, size * width / 960), 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
 
     ctx.fillStyle = "rgba(255, 209, 102, 0.86)";
     [[2, 48], [-3, 40], [12, 42], [18, 59], [-74, 41], [139, 36], [151, -34]].forEach(([lon, lat]) => {
@@ -841,7 +866,7 @@ function startGlobe() {
       if (point.z <= 0) return;
       ctx.globalAlpha = 0.35 + point.z * 0.65;
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 2.1, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, Math.max(2.1, width / 430), 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
