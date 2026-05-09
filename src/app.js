@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.7";
+const APP_VERSION = "0.5.8";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -147,19 +147,42 @@ function defaultPassport() {
     currencies: { geoSparks: 0, airMiles: 0 },
     unlocks: { journey: true, challenge: true, zen: false },
     best: { challenge: 0 },
+    activeRun: null,
   };
 }
 
 function loadPassport() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (parsed && parsed.version === 1) return parsed;
+    if (parsed && parsed.version === 1) {
+      if (!("activeRun" in parsed)) parsed.activeRun = null;
+      return parsed;
+    }
   } catch (_) {}
   return defaultPassport();
 }
 
 function savePassport() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(passport));
+}
+
+function markActiveJourneyRun() {
+  if (state.mode !== "journey" || !state.running) return;
+  passport.activeRun = {
+    mode: "journey",
+    stage: passport.journey.stage,
+    level: passport.journey.level,
+    levelProgress: state.levelProgress,
+    lives: state.lives,
+    updatedAt: Date.now(),
+  };
+  savePassport();
+}
+
+function clearActiveRun() {
+  if (!passport.activeRun) return;
+  passport.activeRun = null;
+  savePassport();
 }
 
 async function loadGeoData() {
@@ -482,6 +505,7 @@ function launchMode(mode) {
   $("run-progress").classList.toggle("hidden", mode === "zen");
   $("hud-mode").textContent = mode === "journey" ? `Journey · ${currentStage().name}` : mode === "challenge" ? "Challenge" : "Zen";
   setScreen("game-screen");
+  markActiveJourneyRun();
   nextQuestion();
 }
 
@@ -739,6 +763,7 @@ function answerQuestion(value, button) {
 
   updateHud();
   savePassport();
+  markActiveJourneyRun();
 
   if (unlockedStage) {
     setTimeout(() => showStageUnlock(unlockedStage), 650);
@@ -815,6 +840,7 @@ function continueStageUnlock() {
   state.paused = false;
   updateHud();
   savePassport();
+  markActiveJourneyRun();
   nextQuestion();
 }
 
@@ -831,6 +857,7 @@ function skipLevel() {
   state.levelProgress = getArchetype().questionsPerLevel;
   const unlockedStage = checkProgression();
   savePassport();
+  markActiveJourneyRun();
   updateHud();
   if (unlockedStage) {
     showStageUnlock(unlockedStage);
@@ -924,6 +951,7 @@ function applyJourneyFailurePenalty() {
   passport.currencies.airMiles = Math.floor(oldAirMiles * JOURNEY_FAILURE_KEEP_RATIO);
   passport.journey.level = 0;
   state.levelProgress = 0;
+  passport.activeRun = null;
   return {
     geoSparks: oldGeoSparks - passport.currencies.geoSparks,
     airMiles: oldAirMiles - passport.currencies.airMiles,
@@ -932,14 +960,22 @@ function applyJourneyFailurePenalty() {
   };
 }
 
+function recoverAbandonedJourney() {
+  if (passport.activeRun?.mode !== "journey") return null;
+  const penalty = applyJourneyFailurePenalty();
+  savePassport();
+  return penalty;
+}
+
 function finishRun(reason) {
   stopTimer();
   state.running = false;
-  const journeyFailed = state.mode === "journey" && reason === "Out of lives";
+  const journeyFailed = state.mode === "journey" && (reason === "Out of lives" || reason === "Run abandoned");
   const penalty = journeyFailed ? applyJourneyFailurePenalty() : null;
   if (state.mode === "challenge" && state.score > passport.best.challenge) {
     passport.best.challenge = state.score;
   }
+  if (!journeyFailed) clearActiveRun();
   savePassport();
   $("result-title").textContent = reason;
   $("result-copy").textContent = journeyFailed
@@ -954,9 +990,14 @@ function finishRun(reason) {
 
 function backToMenu() {
   clearTimeout(state.launchTimer);
+  if (state.running && state.mode === "journey") {
+    finishRun("Run abandoned");
+    return;
+  }
   stopTimer();
   state.running = false;
   state.paused = false;
+  clearActiveRun();
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
   $("stage-unlock-overlay").classList.add("hidden");
@@ -1195,8 +1236,15 @@ function wireEvents() {
   onPress($("auto-correct-btn"), autoCorrect);
   onPress($("skip-level-btn"), skipLevel);
   document.addEventListener("pointerdown", unlockAudio, { once: true });
+  window.addEventListener("pagehide", () => {
+    if (state.running && state.mode === "journey") markActiveJourneyRun();
+  });
+  window.addEventListener("beforeunload", () => {
+    if (state.running && state.mode === "journey") markActiveJourneyRun();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
+      if (state.running && state.mode === "journey") markActiveJourneyRun();
       hiddenAt = Date.now();
       lastVisibleScreen = state.view === "boot-screen" ? splashReadyScreen : state.view;
       if (state.running && state.mode !== "zen") {
@@ -1220,10 +1268,19 @@ async function init() {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
   await loadGeoData();
+  const recoveredPenalty = recoverAbandonedJourney();
   if (!passport.name) {
     readySplash("onboarding-screen");
   } else {
     renderMenu();
+    if (recoveredPenalty) {
+      $("result-title").textContent = "Run abandoned";
+      $("result-copy").textContent = `Your last Journey run closed before it was resolved. Stage ${passport.journey.stage} stays unlocked. Level reset to 0/${recoveredPenalty.levelsPerStage} and questions reset to 0/${recoveredPenalty.questionsPerLevel}. Penalty: -${recoveredPenalty.geoSparks} GeoSparks and -${recoveredPenalty.airMiles} AirMiles.`;
+      $("result-score").textContent = "0";
+      $("result-learning-btn").classList.add("hidden");
+      readySplash("result-screen");
+      return;
+    }
     readySplash("menu-screen");
   }
 }
