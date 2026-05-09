@@ -630,6 +630,43 @@ h1 {
   letter-spacing: 2px;
 }
 
+.run-progress {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(18, 26, 44, 0.76);
+  padding: 10px 12px;
+}
+
+.run-progress-top,
+.run-progress-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.run-progress-top {
+  color: var(--text);
+}
+
+.run-progress-track {
+  height: 6px;
+  margin: 8px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-2);
+}
+
+.run-progress-track div {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--spark), var(--sky));
+  transition: width 220ms ease;
+}
+
 .zen-title {
   min-height: 34px;
   display: grid;
@@ -763,6 +800,7 @@ h1 {
 
 .zen-mode .game-hud,
 .zen-mode .status-row,
+.zen-mode .run-progress,
 .zen-mode .tool-row,
 .zen-mode .feedback-line {
   display: none;

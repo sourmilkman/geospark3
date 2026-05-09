@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.2";
+const APP_VERSION = "0.4.3";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -346,6 +346,7 @@ function launchMode(mode) {
   $("pause-overlay").classList.add("hidden");
   $("journey-progress-track").classList.toggle("hidden", mode !== "journey");
   $("tool-row").classList.toggle("hidden", mode !== "journey");
+  $("run-progress").classList.toggle("hidden", mode === "zen");
   $("hud-mode").textContent = mode === "journey" ? `Journey · ${currentStage().name}` : mode === "challenge" ? "Challenge" : "Zen";
   setScreen("game-screen");
   nextQuestion();
@@ -539,6 +540,19 @@ function updateHud() {
   const archetype = getArchetype();
   const progress = state.mode === "journey" ? (state.levelProgress / archetype.questionsPerLevel) * 100 : 0;
   $("journey-progress-fill").style.width = `${Math.min(100, progress)}%`;
+  const stage = currentStage();
+  const levelWithinStage = Math.max(1, Math.min(passport.journey.level, archetype.levelsPerStage));
+  const questionWithinLevel = Math.min(state.levelProgress, archetype.questionsPerLevel);
+  const answeredInStage = ((levelWithinStage - 1) * archetype.questionsPerLevel) + questionWithinLevel;
+  const totalInStage = archetype.levelsPerStage * archetype.questionsPerLevel;
+  const sectionPercent = state.mode === "journey"
+    ? Math.round((answeredInStage / totalInStage) * 100)
+    : Math.min(100, Math.round((state.score / Math.max(1, passport.best.challenge || state.score || 1000)) * 100));
+  $("stage-progress-label").textContent = state.mode === "journey" ? `Stage ${stage.id}/${STAGES.length} · ${stage.name}` : "Challenge Run";
+  $("level-progress-label").textContent = state.mode === "journey" ? `Level ${levelWithinStage}/${archetype.levelsPerStage}` : `Score ${state.score}`;
+  $("question-progress-label").textContent = state.mode === "journey" ? `Question ${questionWithinLevel}/${archetype.questionsPerLevel}` : `${Math.ceil(state.timerMs / 1000)} seconds left`;
+  $("section-progress-label").textContent = state.mode === "journey" ? `${sectionPercent}% section` : `Best ${passport.best.challenge}`;
+  $("section-progress-fill").style.width = `${Math.min(100, sectionPercent)}%`;
 
   if (state.mode === "challenge") {
     $("hud-stats").textContent = `${Math.ceil(state.timerMs / 1000)}s · ${state.score} · Best ${passport.best.challenge}`;
