@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.9";
+const APP_VERSION = "0.5.10";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -84,7 +84,7 @@ const EUROPE_CORE = new Set([
   "Switzerland",
   "Ukraine",
 ]);
-const EUROPE_MAP_LEVEL_START_RATIO = 0.5;
+const EUROPE_MAP_LEVEL_START = 20;
 const EUROPE_MICROSTATES = new Set(["Andorra", "Liechtenstein", "Luxembourg", "Malta", "Monaco", "San Marino", "Vatican City"]);
 const EUROPE_PIN_POSITIONS = {
   Andorra: [26.3, 54.4],
@@ -242,8 +242,7 @@ function allowedByDifficulty(item) {
 
 function mapQuestionsUnlocked() {
   if (state.mode !== "journey" || passport.journey.stage !== 1) return false;
-  const levels = getArchetype().levelsPerStage;
-  return passport.journey.level >= Math.max(1, Math.floor(levels * EUROPE_MAP_LEVEL_START_RATIO));
+  return passport.journey.level + 1 >= EUROPE_MAP_LEVEL_START;
 }
 
 function questionTypeForPool(usStatePool) {
@@ -666,7 +665,7 @@ function renderQuestion() {
   $("flag-display").innerHTML = q.map ? renderEuropeMap(q.map) : q.flag ? `<img src="${flagUrl(q.flag)}" alt="">` : "";
   if (q.map?.mode === "select") {
     $("answer-grid").innerHTML = "";
-    document.querySelectorAll(".map-country").forEach((button) => onPress(button, () => answerQuestion(button.dataset.answer, button)));
+    document.querySelectorAll(".map-country, .map-country-hit, .map-country-pad, .map-pin").forEach((button) => onPress(button, () => answerQuestion(button.dataset.answer, button)));
   } else {
     $("answer-grid").innerHTML = q.options.map((option) => `<button class="answer-btn" type="button" data-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("");
   }
@@ -675,13 +674,24 @@ function renderQuestion() {
 }
 
 function renderEuropeMap(map) {
-  const countries = europeMapData.map((feature, index) => {
+  const countryPaths = europeMapData.map((feature, index) => {
     const name = feature.name;
     const isTarget = name === map.target;
     const isHighlighted = isTarget && map.mode === "identify";
     const color = isHighlighted ? "#ff4d5e" : MAP_COLORS[index % MAP_COLORS.length];
     return `<path class="map-country ${isHighlighted ? "target" : ""}" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" d="${geometryToPath(feature.geometry)}" style="--map-color:${color}"></path>`;
   }).join("");
+  const countryHitAreas = europeMapData.map((feature) => {
+    const name = feature.name;
+    return `<path class="map-country-hit" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" d="${geometryToPath(feature.geometry)}"></path>`;
+  }).join("");
+  const pads = map.mode === "select" ? europeMapData.map((feature) => {
+    if (EUROPE_MICROSTATES.has(feature.name)) return "";
+    const bounds = geometryProjectedBounds(feature.geometry);
+    if (!bounds || (bounds.width >= 13 && bounds.height >= 9)) return "";
+    const size = Math.max(30, Math.min(44, 38 - Math.min(bounds.width, bounds.height)));
+    return `<button class="map-country-pad" type="button" data-answer="${escapeHtml(feature.name)}" aria-label="${escapeHtml(feature.name)}" style="left:${bounds.cx}%;top:${bounds.cy}%;width:${size}px;height:${size}px"></button>`;
+  }).join("") : "";
   const pins = [...EUROPE_MICROSTATES].map((name) => {
     const [left, top] = EUROPE_PIN_POSITIONS[name];
     return `<button class="map-pin" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left}%;top:${top}%"></button>`;
@@ -689,7 +699,8 @@ function renderEuropeMap(map) {
   return `
     <div class="europe-map ${map.mode}" role="group" aria-label="Europe map question">
       <div class="map-board">
-        <svg class="map-svg" viewBox="0 0 ${EUROPE_MAP_BOUNDS.width} ${EUROPE_MAP_BOUNDS.height}" aria-hidden="true">${countries}</svg>
+        <svg class="map-svg" viewBox="0 0 ${EUROPE_MAP_BOUNDS.width} ${EUROPE_MAP_BOUNDS.height}" aria-hidden="true">${countryPaths}${countryHitAreas}</svg>
+        ${pads}
         ${pins}
       </div>
     </div>
@@ -705,6 +716,29 @@ function geometryToPath(geometry) {
       return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
     }).join("") + "Z")
     .join("")).join("");
+}
+
+function geometryProjectedBounds(geometry) {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  const points = [];
+  polygons.forEach((polygon) => {
+    polygon.filter(ringInEurope).forEach((ring) => {
+      ring.forEach(([lon, lat]) => points.push(projectEuropePoint(lon, lat)));
+    });
+  });
+  if (!points.length) return null;
+  const xs = points.map(([x]) => x);
+  const ys = points.map(([, y]) => y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return {
+    cx: ((minX + maxX) / 2).toFixed(2),
+    cy: ((minY + maxY) / 2).toFixed(2),
+    width: maxX - minX,
+    height: maxY - minY,
+  };
 }
 
 function ringInEurope(ring) {
@@ -735,7 +769,7 @@ function answerQuestion(value, button) {
   const correct = value === q.correct;
   let unlockedStage = null;
   if (button.classList) button.classList.add(correct ? "correct" : "wrong");
-  document.querySelectorAll(".answer-btn, .map-country, .map-pin").forEach((btn) => {
+  document.querySelectorAll(".answer-btn, .map-country, .map-country-hit, .map-country-pad, .map-pin").forEach((btn) => {
     btn.disabled = true;
     if (btn.dataset.answer === q.correct) btn.classList.add("correct");
   });
