@@ -294,17 +294,34 @@ h1 {
 }
 
 .menu-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 360px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--hero-gradient);
   padding: 12px;
 }
 
+.menu-character-art {
+  position: absolute;
+  left: -10px;
+  top: 8px;
+  width: min(42vw, 174px);
+  height: 250px;
+  object-fit: contain;
+  object-position: left top;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34));
+  z-index: 1;
+}
+
 .globe-shell {
   position: relative;
-  width: min(58vw, 270px);
+  width: min(54vw, 250px);
   aspect-ratio: 1;
-  margin: -10px auto 6px;
+  margin: -4px 2px 10px auto;
+  z-index: 0;
 }
 
 #globe-canvas {
@@ -327,9 +344,11 @@ h1 {
 }
 
 .passport-strip {
+  position: relative;
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
   gap: 8px;
+  z-index: 2;
 }
 
 .passport-strip div {
@@ -380,6 +399,14 @@ h1 {
   background:
     radial-gradient(circle at 10% 0%, rgba(53, 224, 178, 0.2), transparent 42%),
     var(--surface-gradient);
+}
+
+.mode-btn.new-game-mode {
+  min-height: 64px;
+}
+
+.mode-btn.new-game-mode strong {
+  color: var(--gold);
 }
 
 .mode-btn b {
@@ -826,6 +853,46 @@ h1 {
   z-index: 5;
 }
 
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(4, 17, 29, 0.74);
+  z-index: 12;
+}
+
+.confirm-panel {
+  width: min(100%, 340px);
+  border: 1px solid var(--line-bright);
+  border-radius: 8px;
+  background: var(--hero-gradient);
+  padding: 22px;
+  box-shadow: 0 22px 70px var(--shadow);
+}
+
+.confirm-panel h2 {
+  margin: 8px 0 0;
+  font-size: 24px;
+}
+
+.confirm-panel p {
+  margin: 10px 0 18px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 10px;
+}
+
+.danger-btn {
+  background: linear-gradient(135deg, #ffca66, #ff6b78);
+}
+
 .pause-panel {
   width: min(100%, 300px);
   border: 1px solid var(--line);
@@ -870,6 +937,8 @@ h1 {
 
 @media (max-height: 680px) {
   .globe-shell { width: min(60vw, 270px); }
+  .menu-hero { min-height: 320px; }
+  .menu-character-art { width: min(40vw, 152px); height: 220px; }
   .question-panel { min-height: 178px; padding: 12px; }
   .flag-display,
   .flag-display.empty { height: 64px; }

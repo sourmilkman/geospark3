@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.0";
+const APP_VERSION = "0.5.2";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -9,10 +9,16 @@ const AIRMILES_LEVEL_REWARD = 25;
 const AIRMILES_STAGE_REWARD = 150;
 const MIN_SPLASH_MS = 1400;
 const FOREGROUND_SPLASH_AFTER_MS = 1200;
+const JOURNEY_FAILURE_KEEP_RATIO = 0.25;
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   backpacker: { label: "The Backpacker", questionsPerLevel: 10, levelsPerStage: 12 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
+};
+const MENU_CHARACTER_ART = {
+  historian: "assets/menu/main_historian.png",
+  backpacker: "assets/menu/main_backpacker.png",
+  pilot: "assets/menu/main_pilot.png",
 };
 
 const STAGES = [
@@ -288,6 +294,8 @@ function renderMenu() {
   $("menu-name").textContent = passport.name || "Explorer";
   $("menu-version").textContent = `GeoSpark v${APP_VERSION}`;
   $("result-version").textContent = `GeoSpark v${APP_VERSION}`;
+  $("menu-character-art").src = MENU_CHARACTER_ART[passport.archetype] || MENU_CHARACTER_ART.historian;
+  $("menu-character-art").alt = `${getArchetype().label} guide`;
   $("menu-stage").textContent = currentStage().name;
   $("menu-sparks").textContent = passport.currencies.geoSparks;
   $("menu-airmiles").textContent = passport.currencies.airMiles;
@@ -310,6 +318,29 @@ function renderMenu() {
     const status = isComplete ? "complete" : isCurrent ? "current" : "";
     return `<div class="stage-pill ${status}"><strong>${stage.id}. ${stage.name}</strong><small>${isComplete ? "Stamped" : isCurrent ? "In progress" : "Locked ahead"}</small></div>`;
   }).join("");
+}
+
+function openNewGameDialog() {
+  Sound.tap();
+  $("new-game-dialog").classList.remove("hidden");
+}
+
+function closeNewGameDialog() {
+  Sound.tap();
+  $("new-game-dialog").classList.add("hidden");
+}
+
+function confirmNewGame() {
+  Sound.tap();
+  localStorage.removeItem(STORAGE_KEY);
+  passport = defaultPassport();
+  $("player-name").value = "";
+  document.querySelectorAll(".choice-card").forEach((item) => item.classList.toggle("selected", item.dataset.archetype === "historian"));
+  $("new-game-dialog").classList.add("hidden");
+  stopTimer();
+  state.running = false;
+  state.paused = false;
+  setScreen("onboarding-screen");
 }
 
 function allLearningItems() {
@@ -708,17 +739,34 @@ function resumeGame() {
   startTimer();
 }
 
+function applyJourneyFailurePenalty() {
+  const oldGeoSparks = passport.currencies.geoSparks;
+  const oldAirMiles = passport.currencies.airMiles;
+  passport.currencies.geoSparks = Math.floor(oldGeoSparks * JOURNEY_FAILURE_KEEP_RATIO);
+  passport.currencies.airMiles = Math.floor(oldAirMiles * JOURNEY_FAILURE_KEEP_RATIO);
+  state.levelProgress = 0;
+  return {
+    geoSparks: oldGeoSparks - passport.currencies.geoSparks,
+    airMiles: oldAirMiles - passport.currencies.airMiles,
+    questionsPerLevel: getArchetype().questionsPerLevel,
+  };
+}
+
 function finishRun(reason) {
   stopTimer();
   state.running = false;
+  const journeyFailed = state.mode === "journey" && reason === "Out of lives";
+  const penalty = journeyFailed ? applyJourneyFailurePenalty() : null;
   if (state.mode === "challenge" && state.score > passport.best.challenge) {
     passport.best.challenge = state.score;
   }
   savePassport();
   $("result-title").textContent = reason;
-  $("result-copy").textContent = state.studySuggested
-    ? "A few misses came close together. Spend a little time in Learning mode, then come back sharper."
-    : state.mode === "challenge" ? `Best challenge score: ${passport.best.challenge}` : `Passport updated for ${passport.name}.`;
+  $("result-copy").textContent = journeyFailed
+    ? `Level progress reset to 0/${penalty.questionsPerLevel}. Penalty: -${penalty.geoSparks} GeoSparks and -${penalty.airMiles} AirMiles.`
+    : state.studySuggested
+      ? "A few misses came close together. Spend a little time in Learning mode, then come back sharper."
+      : state.mode === "challenge" ? `Best challenge score: ${passport.best.challenge}` : `Passport updated for ${passport.name}.`;
   $("result-score").textContent = state.score;
   $("result-learning-btn").classList.toggle("hidden", !state.studySuggested);
   setScreen("result-screen");
@@ -950,6 +998,9 @@ function wireEvents() {
   onPress($("create-passport-btn"), createPassport);
   onPress($("splash-continue-btn"), continueFromSplash);
   onPress($("journey-btn"), () => startMode("journey"));
+  onPress($("new-game-btn"), openNewGameDialog);
+  onPress($("new-game-cancel-btn"), closeNewGameDialog);
+  onPress($("new-game-confirm-btn"), confirmNewGame);
   onPress($("challenge-btn"), () => startMode("challenge"));
   onPress($("learning-btn"), () => startLearning("all"));
   onPress($("zen-btn"), () => startMode("zen"));
