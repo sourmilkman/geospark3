@@ -27,7 +27,7 @@
     </section>
 
     <section class="screen onboarding hidden" id="onboarding-screen" aria-labelledby="onboarding-title">
-      <img class="brand-mark" src="icon-192.png" alt="">
+      <img class="onboarding-art" src="charSelection.png" alt="">
       <h1 id="onboarding-title">GeoSpark</h1>
       <p class="screen-copy">Create your passport and choose the shape of your journey.</p>
       <label class="field-label" for="player-name">Name</label>
@@ -36,6 +36,10 @@
         <button class="choice-card selected" type="button" data-archetype="historian">
           <span class="choice-title">The Historian</span>
           <span class="choice-copy">15 sparks per level, 7 levels per stage.</span>
+        </button>
+        <button class="choice-card" type="button" data-archetype="backpacker">
+          <span class="choice-title">The Backpacker</span>
+          <span class="choice-copy">10 sparks per level, 12 levels per stage.</span>
         </button>
         <button class="choice-card" type="button" data-archetype="pilot">
           <span class="choice-title">The Pilot</span>
@@ -84,7 +88,7 @@
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.4.8</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.4.9</div>
     </section>
 
     <section class="screen launch-screen hidden" id="launch-screen">
@@ -174,7 +178,7 @@
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
       <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
-      <div class="version-label" id="result-version">GeoSpark v0.4.8</div>
+      <div class="version-label" id="result-version">GeoSpark v0.4.9</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>

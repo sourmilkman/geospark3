@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.8";
+const APP_VERSION = "0.4.9";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -11,6 +11,7 @@ const MIN_SPLASH_MS = 1400;
 const FOREGROUND_SPLASH_AFTER_MS = 1200;
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
+  backpacker: { label: "The Backpacker", questionsPerLevel: 10, levelsPerStage: 12 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
 };
 
