@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.2";
+const APP_VERSION = "0.5.3";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -19,6 +19,13 @@ const MENU_CHARACTER_ART = {
   historian: "assets/menu/main_historian.png",
   backpacker: "assets/menu/main_backpacker.png",
   pilot: "assets/menu/main_pilot.png",
+};
+const STAGE_UNLOCK_DETAILS = {
+  2: { region: "South America", copy: "The Atlantic routes are open. South America has joined your question pool.", mapLabel: "South America", mapClass: "south-america" },
+  3: { region: "Asia", copy: "Asia is unlocked. Complete this stage to open Zen Mode.", mapLabel: "Asia", mapClass: "asia" },
+  4: { region: "US States", copy: "The United States stage is live, with state flags and abbreviation drills.", mapLabel: "US States", mapClass: "us-states" },
+  5: { region: "Africa", copy: "Africa is now part of your journey. The map is getting wider.", mapLabel: "Africa", mapClass: "africa" },
+  6: { region: "Global Master", copy: "The final global pool is unlocked. North America and Oceania now enter the game.", mapLabel: "Global", mapClass: "global" },
 };
 
 const STAGES = [
@@ -113,6 +120,7 @@ const state = {
   wrongTimes: [],
   studySuggested: false,
   launchTimer: 0,
+  stageUnlock: null,
 };
 
 function defaultPassport() {
@@ -288,6 +296,10 @@ const Sound = {
   levelUp() {
     [523, 659, 784, 1047].forEach((freq, index) => playTone(freq, 0.2, "sine", 0.07, index * 0.08));
   },
+  stageUnlock() {
+    [392, 523, 659, 784, 1047].forEach((freq, index) => playTone(freq, 0.22, "sine", 0.075, index * 0.075));
+    playTone(1318, 0.28, "triangle", 0.04, 0.38);
+  },
 };
 
 function renderMenu() {
@@ -428,10 +440,12 @@ function launchMode(mode) {
     recent: [],
     wrongTimes: [],
     studySuggested: false,
+    stageUnlock: null,
   });
   $("game-screen").classList.toggle("zen-mode", mode === "zen");
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
+  $("stage-unlock-overlay").classList.add("hidden");
   $("journey-progress-track").classList.toggle("hidden", mode !== "journey");
   $("tool-row").classList.toggle("hidden", mode !== "journey");
   $("run-progress").classList.toggle("hidden", mode === "zen");
@@ -576,6 +590,7 @@ function answerQuestion(value, button) {
   stopTimer();
   const q = state.question;
   const correct = value === q.correct;
+  let unlockedStage = null;
   if (button.classList) button.classList.add(correct ? "correct" : "wrong");
   document.querySelectorAll(".answer-btn").forEach((btn) => {
     btn.disabled = true;
@@ -594,7 +609,7 @@ function answerQuestion(value, button) {
       }
     }
     $("feedback-line").textContent = `Sparked ${q.answer.name}`;
-    checkProgression();
+    unlockedStage = checkProgression();
   } else {
     Sound.wrong();
     haptic("wrong");
@@ -609,6 +624,11 @@ function answerQuestion(value, button) {
   updateHud();
   savePassport();
 
+  if (unlockedStage) {
+    setTimeout(() => showStageUnlock(unlockedStage), 650);
+    return;
+  }
+
   if (state.mode !== "zen" && state.lives <= 0) {
     setTimeout(() => finishRun("Out of lives"), 850);
     return;
@@ -617,16 +637,17 @@ function answerQuestion(value, button) {
 }
 
 function checkProgression() {
-  if (state.mode !== "journey") return;
+  if (state.mode !== "journey") return null;
   const archetype = getArchetype();
-  if (state.levelProgress < archetype.questionsPerLevel) return;
+  if (state.levelProgress < archetype.questionsPerLevel) return null;
   state.levelProgress = 0;
   passport.journey.level += 1;
   passport.currencies.airMiles += AIRMILES_LEVEL_REWARD;
 
   if (passport.journey.level > archetype.levelsPerStage) {
-    completeStage();
+    return completeStage();
   }
+  return null;
 }
 
 function completeStage() {
@@ -637,11 +658,48 @@ function completeStage() {
   if (completed.id < STAGES.length) {
     passport.journey.stage = completed.id + 1;
     passport.journey.level = 1;
+    const unlockedStage = currentStage();
+    Sound.stageUnlock();
+    $("hud-mode").textContent = `Journey · ${unlockedStage.name}`;
+    return unlockedStage;
   } else {
     passport.journey.level = getArchetype().levelsPerStage;
   }
   Sound.levelUp();
   $("hud-mode").textContent = `Journey · ${currentStage().name}`;
+  return null;
+}
+
+function showStageUnlock(stage) {
+  const details = STAGE_UNLOCK_DETAILS[stage.id] || {
+    region: stage.name,
+    copy: `${stage.name} has joined your journey.`,
+    mapLabel: stage.name,
+    mapClass: "global",
+  };
+  state.stageUnlock = stage.id;
+  state.paused = true;
+  $("stage-unlock-title").textContent = `${details.region} Unlocked`;
+  $("stage-unlock-copy").textContent = details.copy;
+  $("stage-unlock-label").textContent = details.mapLabel;
+  $("stage-unlock-bonus").textContent = stage.id === 4
+    ? "New drills added"
+    : stage.id === 6
+      ? "Final region pool opened"
+      : "New region added";
+  const map = $("stage-unlock-map");
+  map.className = `stage-map ${details.mapClass}`;
+  $("stage-unlock-overlay").classList.remove("hidden");
+}
+
+function continueStageUnlock() {
+  Sound.tap();
+  $("stage-unlock-overlay").classList.add("hidden");
+  state.stageUnlock = null;
+  state.paused = false;
+  updateHud();
+  savePassport();
+  nextQuestion();
 }
 
 function autoCorrect() {
@@ -655,9 +713,13 @@ function skipLevel() {
   if (state.mode !== "journey" || passport.currencies.airMiles < SKIP_LEVEL_COST) return;
   passport.currencies.airMiles -= SKIP_LEVEL_COST;
   state.levelProgress = getArchetype().questionsPerLevel;
-  checkProgression();
+  const unlockedStage = checkProgression();
   savePassport();
   updateHud();
+  if (unlockedStage) {
+    showStageUnlock(unlockedStage);
+    return;
+  }
   nextQuestion();
 }
 
@@ -779,6 +841,7 @@ function backToMenu() {
   state.paused = false;
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
+  $("stage-unlock-overlay").classList.add("hidden");
   renderMenu();
   setScreen("menu-screen");
 }
@@ -1008,6 +1071,7 @@ function wireEvents() {
   onPress($("learn-back-btn"), backToMenu);
   onPress($("pause-btn"), pauseGame);
   onPress($("resume-btn"), resumeGame);
+  onPress($("stage-unlock-continue-btn"), continueStageUnlock);
   onPress($("result-menu-btn"), backToMenu);
   onPress($("result-learning-btn"), () => startLearning("all"));
   onPress($("auto-correct-btn"), autoCorrect);

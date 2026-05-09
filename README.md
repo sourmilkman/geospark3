@@ -2,7 +2,7 @@
 
 GeoSpark is now a multi-mode mobile-first geography progression game.
 
-Current game version: `0.5.2`
+Current game version: `0.5.3`
 
 ## Versioning
 

@@ -853,6 +853,178 @@ h1 {
   z-index: 5;
 }
 
+.stage-unlock-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 50% 25%, rgba(53, 224, 178, 0.12), transparent 42%),
+    rgba(4, 17, 29, 0.76);
+  z-index: 8;
+}
+
+.stage-unlock-panel {
+  width: min(100%, 350px);
+  border: 1px solid var(--line-bright);
+  border-radius: 8px;
+  background: var(--hero-gradient);
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 22px 70px var(--shadow);
+}
+
+.stage-unlock-panel h2 {
+  margin: 8px 0 12px;
+  font-size: 27px;
+  line-height: 1.05;
+}
+
+.stage-unlock-panel p {
+  margin: 14px 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.stage-map {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 196px;
+  margin: 8px 0 12px;
+}
+
+.stage-globe {
+  position: relative;
+  width: 168px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid rgba(82, 183, 255, 0.36);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(244, 247, 251, 0.18), transparent 16%),
+    radial-gradient(circle at 50% 50%, #194f83 0%, #0b2748 65%, #04111d 100%);
+  box-shadow: 0 0 44px rgba(53, 224, 178, 0.2);
+  animation: unlockPulse 1200ms ease-in-out infinite alternate;
+}
+
+.stage-globe::before,
+.stage-globe::after {
+  content: "";
+  position: absolute;
+  inset: 16%;
+  border: 1px solid rgba(179, 191, 208, 0.08);
+  border-radius: 999px;
+}
+
+.stage-globe::after {
+  inset: 0;
+  border-left-color: rgba(179, 191, 208, 0.16);
+  border-right-color: rgba(179, 191, 208, 0.16);
+}
+
+.map-region {
+  position: absolute;
+  display: block;
+  opacity: 0.18;
+  background: rgba(53, 224, 178, 0.72);
+  filter: drop-shadow(0 0 10px rgba(53, 224, 178, 0.3));
+}
+
+.map-region.europe {
+  left: 73px;
+  top: 50px;
+  width: 28px;
+  height: 20px;
+  clip-path: polygon(18% 24%, 70% 0, 100% 44%, 66% 100%, 8% 76%);
+}
+
+.map-region.south-america {
+  left: 56px;
+  top: 86px;
+  width: 34px;
+  height: 60px;
+  clip-path: polygon(24% 0, 88% 22%, 72% 56%, 48% 100%, 20% 62%, 0 30%);
+}
+
+.map-region.asia {
+  left: 93px;
+  top: 46px;
+  width: 58px;
+  height: 52px;
+  clip-path: polygon(0 24%, 36% 0, 92% 12%, 100% 66%, 54% 100%, 8% 78%);
+}
+
+.map-region.us-states {
+  left: 28px;
+  top: 62px;
+  width: 44px;
+  height: 30px;
+  clip-path: polygon(0 28%, 76% 0, 100% 46%, 84% 86%, 24% 100%);
+}
+
+.map-region.africa {
+  left: 80px;
+  top: 79px;
+  width: 42px;
+  height: 64px;
+  clip-path: polygon(24% 0, 76% 10%, 100% 42%, 76% 100%, 32% 92%, 0 44%);
+}
+
+.map-region.global {
+  inset: 22px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(53, 224, 178, 0.08), rgba(53, 224, 178, 0.18));
+}
+
+.stage-map.south-america .map-region.south-america,
+.stage-map.asia .map-region.asia,
+.stage-map.us-states .map-region.us-states,
+.stage-map.africa .map-region.africa,
+.stage-map.global .map-region.global {
+  opacity: 1;
+  animation: regionReveal 900ms ease both;
+}
+
+.stage-map strong {
+  position: absolute;
+  bottom: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(16, 27, 49, 0.9);
+  color: var(--spark);
+  padding: 7px 14px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stage-bonus {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 16px;
+  border: 1px solid rgba(255, 202, 102, 0.46);
+  border-radius: 999px;
+  background: rgba(255, 202, 102, 0.12);
+  color: var(--gold);
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@keyframes regionReveal {
+  from { opacity: 0; transform: scale(0.72); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes unlockPulse {
+  from { transform: scale(0.985); box-shadow: 0 0 28px rgba(53, 224, 178, 0.14); }
+  to { transform: scale(1.015); box-shadow: 0 0 52px rgba(53, 224, 178, 0.26); }
+}
+
 .confirm-overlay {
   position: fixed;
   inset: 0;

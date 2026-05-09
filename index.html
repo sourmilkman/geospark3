@@ -92,7 +92,7 @@
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.5.2</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.5.3</div>
 
       <div class="confirm-overlay hidden" id="new-game-dialog" role="dialog" aria-modal="true" aria-labelledby="new-game-title">
         <div class="confirm-panel">
@@ -187,6 +187,27 @@
           <button class="primary-btn" id="resume-btn" type="button">Resume</button>
         </div>
       </div>
+
+      <div class="stage-unlock-overlay hidden" id="stage-unlock-overlay" role="dialog" aria-modal="true" aria-labelledby="stage-unlock-title">
+        <div class="stage-unlock-panel">
+          <div class="eyebrow">Stage Unlocked</div>
+          <h2 id="stage-unlock-title">New Region Unlocked</h2>
+          <div class="stage-map global" id="stage-unlock-map" aria-hidden="true">
+            <div class="stage-globe">
+              <span class="map-region europe"></span>
+              <span class="map-region south-america"></span>
+              <span class="map-region asia"></span>
+              <span class="map-region us-states"></span>
+              <span class="map-region africa"></span>
+              <span class="map-region global"></span>
+            </div>
+            <strong id="stage-unlock-label">Global</strong>
+          </div>
+          <p id="stage-unlock-copy">A new region has joined your journey.</p>
+          <div class="stage-bonus" id="stage-unlock-bonus">New region added</div>
+          <button class="primary-btn" id="stage-unlock-continue-btn" type="button">Continue Journey</button>
+        </div>
+      </div>
     </section>
 
     <section class="screen result-screen hidden" id="result-screen">
@@ -194,7 +215,7 @@
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
       <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
-      <div class="version-label" id="result-version">GeoSpark v0.5.2</div>
+      <div class="version-label" id="result-version">GeoSpark v0.5.3</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>
