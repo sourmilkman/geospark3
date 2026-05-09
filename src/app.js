@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.3";
+const APP_VERSION = "0.5.4";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -128,7 +128,7 @@ function defaultPassport() {
     version: 1,
     name: "",
     archetype: "historian",
-    journey: { stage: 1, level: 1, stamps: [] },
+    journey: { stage: 1, level: 0, stamps: [] },
     currencies: { geoSparks: 0, airMiles: 0 },
     unlocks: { journey: true, challenge: true, zen: false },
     best: { challenge: 0 },
@@ -183,7 +183,7 @@ function stateAbbr(item) {
 function journeyDifficultyBand() {
   if (state.mode !== "journey" || passport.journey.stage !== 1) return 3;
   const levels = getArchetype().levelsPerStage;
-  const level = Math.max(1, passport.journey.level);
+  const level = Math.max(1, passport.journey.level + 1);
   if (level <= Math.max(2, Math.ceil(levels * 0.3))) return 1;
   if (level <= Math.max(4, Math.ceil(levels * 0.65))) return 2;
   return 3;
@@ -311,7 +311,7 @@ function renderMenu() {
   $("menu-stage").textContent = currentStage().name;
   $("menu-sparks").textContent = passport.currencies.geoSparks;
   $("menu-airmiles").textContent = passport.currencies.airMiles;
-  const hasJourneyProgress = passport.journey.stage > 1 || passport.journey.level > 1 || passport.journey.stamps.length > 0;
+  const hasJourneyProgress = passport.journey.stage > 1 || passport.journey.level > 0 || passport.journey.stamps.length > 0;
   $("journey-label").textContent = hasJourneyProgress ? "Continue the Journey" : "Journey";
   $("journey-copy").textContent = hasJourneyProgress
     ? `Stage ${passport.journey.stage}: ${currentStage().name}`
@@ -414,7 +414,7 @@ function startMode(mode) {
   clearTimeout(state.launchTimer);
   stopTimer();
   Sound.tap();
-  const title = mode === "journey" ? (passport.journey.stage > 1 || passport.journey.level > 1 ? "Continue the Journey" : "Journey") : mode === "challenge" ? "Challenge" : "Zen";
+  const title = mode === "journey" ? (passport.journey.stage > 1 || passport.journey.level > 0 ? "Continue the Journey" : "Journey") : mode === "challenge" ? "Challenge" : "Zen";
   $("launch-title").textContent = title;
   $("launch-copy").textContent = mode === "journey"
     ? `${currentStage().name} · Level ${passport.journey.level}`
@@ -644,7 +644,7 @@ function checkProgression() {
   passport.journey.level += 1;
   passport.currencies.airMiles += AIRMILES_LEVEL_REWARD;
 
-  if (passport.journey.level > archetype.levelsPerStage) {
+  if (passport.journey.level >= archetype.levelsPerStage) {
     return completeStage();
   }
   return null;
@@ -657,7 +657,7 @@ function completeStage() {
   if (completed.id === 3) passport.unlocks.zen = true;
   if (completed.id < STAGES.length) {
     passport.journey.stage = completed.id + 1;
-    passport.journey.level = 1;
+    passport.journey.level = 0;
     const unlockedStage = currentStage();
     Sound.stageUnlock();
     $("hud-mode").textContent = `Journey · ${unlockedStage.name}`;
@@ -728,9 +728,9 @@ function updateHud() {
   const progress = state.mode === "journey" ? (state.levelProgress / archetype.questionsPerLevel) * 100 : 0;
   $("journey-progress-fill").style.width = `${Math.min(100, progress)}%`;
   const stage = currentStage();
-  const levelWithinStage = Math.max(1, Math.min(passport.journey.level, archetype.levelsPerStage));
+  const levelWithinStage = Math.max(0, Math.min(passport.journey.level, archetype.levelsPerStage));
   const questionWithinLevel = Math.min(state.levelProgress, archetype.questionsPerLevel);
-  const answeredInStage = ((levelWithinStage - 1) * archetype.questionsPerLevel) + questionWithinLevel;
+  const answeredInStage = (levelWithinStage * archetype.questionsPerLevel) + questionWithinLevel;
   const totalInStage = archetype.levelsPerStage * archetype.questionsPerLevel;
   const sectionPercent = state.mode === "journey"
     ? Math.round((answeredInStage / totalInStage) * 100)
@@ -806,11 +806,13 @@ function applyJourneyFailurePenalty() {
   const oldAirMiles = passport.currencies.airMiles;
   passport.currencies.geoSparks = Math.floor(oldGeoSparks * JOURNEY_FAILURE_KEEP_RATIO);
   passport.currencies.airMiles = Math.floor(oldAirMiles * JOURNEY_FAILURE_KEEP_RATIO);
+  passport.journey.level = 0;
   state.levelProgress = 0;
   return {
     geoSparks: oldGeoSparks - passport.currencies.geoSparks,
     airMiles: oldAirMiles - passport.currencies.airMiles,
     questionsPerLevel: getArchetype().questionsPerLevel,
+    levelsPerStage: getArchetype().levelsPerStage,
   };
 }
 
@@ -825,7 +827,7 @@ function finishRun(reason) {
   savePassport();
   $("result-title").textContent = reason;
   $("result-copy").textContent = journeyFailed
-    ? `Level progress reset to 0/${penalty.questionsPerLevel}. Penalty: -${penalty.geoSparks} GeoSparks and -${penalty.airMiles} AirMiles.`
+    ? `Stage ${passport.journey.stage} stays unlocked. Level reset to 0/${penalty.levelsPerStage} and questions reset to 0/${penalty.questionsPerLevel}. Penalty: -${penalty.geoSparks} GeoSparks and -${penalty.airMiles} AirMiles.`
     : state.studySuggested
       ? "A few misses came close together. Spend a little time in Learning mode, then come back sharper."
       : state.mode === "challenge" ? `Best challenge score: ${passport.best.challenge}` : `Passport updated for ${passport.name}.`;
