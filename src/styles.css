@@ -781,6 +781,11 @@ h1 {
   margin: 8px 0;
 }
 
+.flag-display.map-display {
+  height: 150px;
+  margin: 8px 0 4px;
+}
+
 .flag-display.empty {
   height: 84px;
   margin: 8px 0;
@@ -790,6 +795,124 @@ h1 {
   width: 96px;
   border-radius: 6px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.question-panel.map-question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 286px;
+  padding: 14px;
+}
+
+.question-panel.map-question .question-badge { order: 0; }
+.question-panel.map-question h2 { order: 1; }
+.question-panel.map-question p { order: 2; }
+.question-panel.map-question .flag-display { order: 3; }
+
+.europe-map {
+  width: min(100%, 258px);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.map-board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.55;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #070914;
+}
+
+.map-country,
+.map-pin {
+  position: absolute;
+  border: 1px solid rgba(4, 17, 29, 0.72);
+  background: var(--map-color);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.map-country {
+  border-radius: 9px 5px 10px 4px;
+  transform: skew(-7deg) rotate(var(--tilt, 0deg));
+}
+
+.map-country:nth-child(3n) { --tilt: 3deg; }
+.map-country:nth-child(4n) { --tilt: -4deg; }
+.map-country:nth-child(5n) { border-radius: 14px 7px 9px 12px; }
+
+.map-country.micro {
+  min-width: 22px;
+  min-height: 22px;
+  border: 2px solid rgba(244, 247, 251, 0.44);
+  border-radius: 999px;
+  transform: none;
+  z-index: 4;
+}
+
+.map-country.target,
+.map-pin.target,
+.map-country.correct,
+.map-pin.correct {
+  border-color: #fff2f2;
+  background: #ff4d5e;
+  box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.18), 0 0 22px rgba(255, 77, 94, 0.5);
+  z-index: 7;
+}
+
+.map-country.wrong,
+.map-pin.wrong {
+  outline: 3px solid rgba(255, 107, 120, 0.5);
+  filter: grayscale(0.4);
+}
+
+.map-pin {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(244, 247, 251, 0.9);
+  font-size: 8px;
+  font-weight: 950;
+  transform: translate(-50%, -50%);
+  z-index: 9;
+}
+
+.europe-map.identify .map-pin {
+  pointer-events: none;
+}
+
+.map-inset {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.map-inset b {
+  color: var(--spark);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.question-panel.map-question h2 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.question-panel.map-question p {
+  margin-top: 4px;
+}
+
+.game-screen.map-question .answer-btn {
+  min-height: 46px;
 }
 
 .question-panel h2 {
