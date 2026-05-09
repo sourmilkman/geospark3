@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.7";
+const APP_VERSION = "0.4.8";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -7,6 +7,8 @@ const GEOSPARK_STREAK_INTERVAL = 5;
 const GEOSPARK_STREAK_REWARD = 3;
 const AIRMILES_LEVEL_REWARD = 25;
 const AIRMILES_STAGE_REWARD = 150;
+const MIN_SPLASH_MS = 1400;
+const FOREGROUND_SPLASH_AFTER_MS = 1200;
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -80,6 +82,10 @@ let globeRaf = 0;
 let audioReady = false;
 let audioCtx = null;
 let splashReadyScreen = "";
+let splashStartedAt = performance.now();
+let hiddenAt = 0;
+let lastVisibleScreen = "";
+let splashPausedRun = false;
 
 const state = {
   view: "boot",
@@ -188,8 +194,36 @@ function setScreen(id) {
 function continueFromSplash() {
   if (!splashReadyScreen) return;
   Sound.tap();
-  if (splashReadyScreen === "menu-screen") renderMenu();
-  setScreen(splashReadyScreen);
+  const targetScreen = splashReadyScreen;
+  splashReadyScreen = "";
+  if (targetScreen === "menu-screen") renderMenu();
+  setScreen(targetScreen);
+  if (targetScreen === "game-screen" && splashPausedRun && state.running && state.mode !== "zen") {
+    state.paused = false;
+    $("game-screen").classList.remove("paused");
+    startTimer();
+  }
+  splashPausedRun = false;
+}
+
+function readySplash(targetScreen, status = "Ready to explore") {
+  splashReadyScreen = "";
+  $("splash-status").textContent = status;
+  $("splash-continue-btn").textContent = "Loading";
+  $("splash-continue-btn").disabled = true;
+  const elapsed = performance.now() - splashStartedAt;
+  window.setTimeout(() => {
+    splashReadyScreen = targetScreen;
+    $("splash-status").textContent = status;
+    $("splash-continue-btn").textContent = "Continue";
+    $("splash-continue-btn").disabled = false;
+  }, Math.max(0, MIN_SPLASH_MS - elapsed));
+}
+
+function showSplashGate(targetScreen, status = "Ready to explore") {
+  splashStartedAt = performance.now();
+  readySplash(targetScreen, status);
+  setScreen("boot-screen");
 }
 
 function flagUrl(cc) {
@@ -928,8 +962,21 @@ function wireEvents() {
   onPress($("skip-level-btn"), skipLevel);
   document.addEventListener("pointerdown", unlockAudio, { once: true });
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) stopTimer();
-    else if (state.running && state.mode !== "zen") startTimer();
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      lastVisibleScreen = state.view === "boot-screen" ? splashReadyScreen : state.view;
+      if (state.running && state.mode !== "zen") {
+        stopTimer();
+        state.paused = true;
+        splashPausedRun = true;
+      }
+      return;
+    }
+    if (lastVisibleScreen && Date.now() - hiddenAt >= FOREGROUND_SPLASH_AFTER_MS) {
+      showSplashGate(lastVisibleScreen, "Welcome back");
+      return;
+    }
+    if (state.running && state.mode !== "zen" && !state.paused) startTimer();
   });
 }
 
@@ -940,14 +987,11 @@ async function init() {
   }
   await loadGeoData();
   if (!passport.name) {
-    splashReadyScreen = "onboarding-screen";
+    readySplash("onboarding-screen");
   } else {
     renderMenu();
-    splashReadyScreen = "menu-screen";
+    readySplash("menu-screen");
   }
-  $("splash-status").textContent = "Ready to explore";
-  $("splash-continue-btn").textContent = "Continue";
-  $("splash-continue-btn").disabled = false;
 }
 
 init().catch(() => {
