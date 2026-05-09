@@ -13,14 +13,16 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://flagcdn.com">
+  <link rel="preload" href="splash_smol.jpg" as="image">
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
   <main class="app" id="app">
     <section class="screen boot-screen" id="boot-screen">
-      <img class="brand-mark" src="icon-192.png" alt="">
-      <div class="brand-title">GeoSpark</div>
-      <div class="muted">Loading passport...</div>
+      <img class="splash-art" src="splash_smol.jpg" alt="GeoSpark">
+      <div class="splash-loading">
+        <div class="muted">Loading passport...</div>
+      </div>
     </section>
 
     <section class="screen onboarding hidden" id="onboarding-screen" aria-labelledby="onboarding-title">
@@ -81,7 +83,7 @@
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.4.5</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.4.6</div>
     </section>
 
     <section class="screen launch-screen hidden" id="launch-screen">
@@ -171,7 +173,7 @@
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
       <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
-      <div class="version-label" id="result-version">GeoSpark v0.4.5</div>
+      <div class="version-label" id="result-version">GeoSpark v0.4.6</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>

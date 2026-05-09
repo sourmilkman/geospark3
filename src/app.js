@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.5";
+const APP_VERSION = "0.4.6";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
