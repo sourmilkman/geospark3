@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.5";
+const APP_VERSION = "0.5.6";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -85,22 +85,18 @@ const EUROPE_CORE = new Set([
   "Ukraine",
 ]);
 const EUROPE_MAP_LEVEL_START_RATIO = 0.5;
-const EUROPE_MAP_LAYOUT = {
-  Iceland: [6, 10, 10, 7], Ireland: [13, 38, 7, 11], "United Kingdom": [21, 30, 10, 17],
-  Norway: [43, 6, 10, 28], Sweden: [54, 11, 10, 27], Finland: [66, 10, 10, 22],
-  Denmark: [43, 38, 7, 6], Estonia: [67, 35, 7, 5], Latvia: [66, 42, 9, 5], Lithuania: [64, 49, 9, 5],
-  Belarus: [75, 46, 12, 8], Russia: [87, 26, 12, 30], Netherlands: [34, 47, 6, 6], Belgium: [33, 54, 6, 5],
-  Luxembourg: [40, 56, 3, 4], France: [25, 60, 16, 16], Spain: [15, 78, 17, 12], Portugal: [10, 78, 5, 13],
-  Andorra: [27, 76, 3, 3], Monaco: [42, 72, 3, 3], Germany: [42, 48, 12, 13], Switzerland: [41, 64, 9, 5],
-  Liechtenstein: [51, 64, 3, 3], Austria: [53, 62, 12, 5], Czechia: [53, 55, 10, 6], Poland: [64, 54, 14, 10],
-  Slovakia: [64, 65, 10, 5], Hungary: [63, 71, 10, 6], Slovenia: [55, 70, 5, 4], Croatia: [58, 76, 9, 7],
-  "Bosnia and Herzegovina": [63, 81, 7, 6], Serbia: [71, 78, 8, 8], Montenegro: [69, 87, 4, 4],
-  Albania: [72, 90, 5, 5], "North Macedonia": [78, 89, 7, 4], Greece: [80, 94, 10, 5], Italy: [46, 72, 10, 20],
-  Malta: [55, 96, 3, 3], "San Marino": [54, 78, 3, 3], "Vatican City": [53, 84, 3, 3],
-  Romania: [75, 69, 13, 8], Bulgaria: [82, 82, 10, 6], Moldova: [88, 67, 6, 5], Ukraine: [82, 57, 16, 10],
-};
 const EUROPE_MICROSTATES = new Set(["Andorra", "Liechtenstein", "Luxembourg", "Malta", "Monaco", "San Marino", "Vatican City"]);
+const EUROPE_PIN_POSITIONS = {
+  Andorra: [26.3, 54.4],
+  Liechtenstein: [49.6, 43.7],
+  Luxembourg: [40.2, 39.3],
+  Malta: [55.2, 66.4],
+  Monaco: [43.4, 51.2],
+  "San Marino": [50.9, 51.7],
+  "Vatican City": [48.9, 56.6],
+};
 const MAP_COLORS = ["#7fd8d8", "#e4869b", "#b8e27f", "#c49be8", "#e5b07e", "#93bdea", "#80d99a", "#d783c8", "#d7d577"];
+const EUROPE_MAP_BOUNDS = { minLon: -25, maxLon: 45, minLat: 34, maxLat: 72, width: 100, height: 72 };
 
 const $ = (id) => document.getElementById(id);
 const onPress = (el, fn) => el.addEventListener("pointerup", (event) => {
@@ -110,6 +106,7 @@ const onPress = (el, fn) => el.addEventListener("pointerup", (event) => {
 
 let passport = loadPassport();
 let geoData = {};
+let europeMapData = [];
 let globeRaf = 0;
 let audioReady = false;
 let audioCtx = null;
@@ -171,6 +168,8 @@ async function loadGeoData() {
     return [file, await response.json()];
   }));
   geoData = Object.fromEntries(entries);
+  const mapResponse = await fetch("data/europe_map.json", { cache: "no-cache" });
+  europeMapData = await mapResponse.json();
 }
 
 function getArchetype() {
@@ -649,24 +648,60 @@ function renderQuestion() {
 }
 
 function renderEuropeMap(map) {
-  const countries = Object.entries(EUROPE_MAP_LAYOUT).map(([name, box], index) => {
-    const [left, top, width, height] = box;
+  const countries = europeMapData.map((feature, index) => {
+    const name = feature.name;
     const isTarget = name === map.target;
-    const isMicro = EUROPE_MICROSTATES.has(name);
-    const color = isTarget && map.mode === "identify" ? "#ff4d5e" : MAP_COLORS[index % MAP_COLORS.length];
-    return `<button class="map-country ${isTarget ? "target" : ""} ${isMicro ? "micro" : ""}" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;--map-color:${color}"></button>`;
+    const isHighlighted = isTarget && map.mode === "identify";
+    const color = isHighlighted ? "#ff4d5e" : MAP_COLORS[index % MAP_COLORS.length];
+    return `<path class="map-country ${isHighlighted ? "target" : ""}" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" d="${geometryToPath(feature.geometry)}" style="--map-color:${color}"></path>`;
   }).join("");
   const pins = [...EUROPE_MICROSTATES].map((name) => {
-    const [left, top] = EUROPE_MAP_LAYOUT[name];
+    const [left, top] = EUROPE_PIN_POSITIONS[name];
     const isTarget = name === map.target;
-    return `<button class="map-pin ${isTarget ? "target" : ""}" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left + 1.5}%;top:${top + 1.5}%">${escapeHtml(name.slice(0, 2).toUpperCase())}</button>`;
+    const isHighlighted = isTarget && map.mode === "identify";
+    return `<button class="map-pin ${isHighlighted ? "target" : ""}" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left}%;top:${top}%">${escapeHtml(name.slice(0, 2).toUpperCase())}</button>`;
   }).join("");
   return `
     <div class="europe-map ${map.mode}" role="group" aria-label="Europe map question">
-      <div class="map-board">${countries}${pins}</div>
+      <div class="map-board">
+        <svg class="map-svg" viewBox="0 0 ${EUROPE_MAP_BOUNDS.width} ${EUROPE_MAP_BOUNDS.height}" aria-hidden="true">${countries}</svg>
+        ${pins}
+      </div>
       <div class="map-inset"><b>Small countries</b><span>Tap enlarged pins for microstates</span></div>
     </div>
   `;
+}
+
+function geometryToPath(geometry) {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.map((polygon) => polygon
+    .filter(ringInEurope)
+    .map((ring) => ring.map(([lon, lat], index) => {
+      const [x, y] = projectEuropePoint(lon, lat);
+      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+    }).join("") + "Z")
+    .join("")).join("");
+}
+
+function ringInEurope(ring) {
+  const bounds = ring.reduce((acc, [lon, lat]) => ({
+    minLon: Math.min(acc.minLon, lon),
+    maxLon: Math.max(acc.maxLon, lon),
+    minLat: Math.min(acc.minLat, lat),
+    maxLat: Math.max(acc.maxLat, lat),
+  }), { minLon: Infinity, maxLon: -Infinity, minLat: Infinity, maxLat: -Infinity });
+  return bounds.maxLon >= EUROPE_MAP_BOUNDS.minLon - 8
+    && bounds.minLon <= EUROPE_MAP_BOUNDS.maxLon + 8
+    && bounds.maxLat >= EUROPE_MAP_BOUNDS.minLat - 4
+    && bounds.minLat <= EUROPE_MAP_BOUNDS.maxLat + 4;
+}
+
+function projectEuropePoint(lon, lat) {
+  const clampedLon = Math.max(EUROPE_MAP_BOUNDS.minLon - 7, Math.min(EUROPE_MAP_BOUNDS.maxLon + 7, lon));
+  const clampedLat = Math.max(EUROPE_MAP_BOUNDS.minLat - 4, Math.min(EUROPE_MAP_BOUNDS.maxLat + 4, lat));
+  const x = ((clampedLon - EUROPE_MAP_BOUNDS.minLon) / (EUROPE_MAP_BOUNDS.maxLon - EUROPE_MAP_BOUNDS.minLon)) * EUROPE_MAP_BOUNDS.width;
+  const y = ((EUROPE_MAP_BOUNDS.maxLat - clampedLat) / (EUROPE_MAP_BOUNDS.maxLat - EUROPE_MAP_BOUNDS.minLat)) * EUROPE_MAP_BOUNDS.height;
+  return [x, y];
 }
 
 function answerQuestion(value, button) {

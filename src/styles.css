@@ -782,7 +782,8 @@ h1 {
 }
 
 .flag-display.map-display {
-  height: 150px;
+  width: 100%;
+  height: auto;
   margin: 8px 0 4px;
 }
 
@@ -799,6 +800,7 @@ h1 {
 
 .question-panel.map-question {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
   min-height: 286px;
@@ -811,7 +813,7 @@ h1 {
 .question-panel.map-question .flag-display { order: 3; }
 
 .europe-map {
-  width: min(100%, 258px);
+  width: min(100%, 280px);
   display: grid;
   grid-template-columns: 1fr;
   gap: 4px;
@@ -820,14 +822,34 @@ h1 {
 .map-board {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.55;
+  aspect-ratio: 1.42;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #070914;
 }
 
-.map-country,
+.map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map-svg .map-country {
+  fill: var(--map-color);
+  stroke: rgba(4, 17, 29, 0.78);
+  stroke-linejoin: round;
+  stroke-width: 0.32;
+  cursor: pointer;
+  transition: fill 140ms ease, filter 140ms ease, stroke-width 140ms ease;
+}
+
+.map-svg .map-country:hover {
+  filter: brightness(1.12);
+  stroke-width: 0.54;
+}
+
 .map-pin {
   position: absolute;
   border: 1px solid rgba(4, 17, 29, 0.72);
@@ -836,27 +858,15 @@ h1 {
   cursor: pointer;
 }
 
-.map-country {
-  border-radius: 9px 5px 10px 4px;
-  transform: skew(-7deg) rotate(var(--tilt, 0deg));
+.map-svg .map-country.target,
+.map-svg .map-country.correct {
+  fill: #ff4d5e;
+  filter: drop-shadow(0 0 4px rgba(255, 77, 94, 0.6));
+  stroke: #fff2f2;
+  stroke-width: 0.7;
 }
 
-.map-country:nth-child(3n) { --tilt: 3deg; }
-.map-country:nth-child(4n) { --tilt: -4deg; }
-.map-country:nth-child(5n) { border-radius: 14px 7px 9px 12px; }
-
-.map-country.micro {
-  min-width: 22px;
-  min-height: 22px;
-  border: 2px solid rgba(244, 247, 251, 0.44);
-  border-radius: 999px;
-  transform: none;
-  z-index: 4;
-}
-
-.map-country.target,
 .map-pin.target,
-.map-country.correct,
 .map-pin.correct {
   border-color: #fff2f2;
   background: #ff4d5e;
@@ -864,7 +874,13 @@ h1 {
   z-index: 7;
 }
 
-.map-country.wrong,
+.map-svg .map-country.wrong {
+  fill: #ff6b78;
+  filter: grayscale(0.35);
+  stroke: rgba(255, 244, 244, 0.75);
+  stroke-width: 0.62;
+}
+
 .map-pin.wrong {
   outline: 3px solid rgba(255, 107, 120, 0.5);
   filter: grayscale(0.4);
@@ -881,6 +897,10 @@ h1 {
   font-weight: 950;
   transform: translate(-50%, -50%);
   z-index: 9;
+}
+
+.map-pin:hover {
+  filter: brightness(1.08);
 }
 
 .europe-map.identify .map-pin {
