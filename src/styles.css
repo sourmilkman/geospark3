@@ -318,7 +318,7 @@ h1 {
 
 .globe-shell {
   position: relative;
-  width: min(54vw, 250px);
+  width: min(58vw, 286px);
   aspect-ratio: 1;
   margin: -4px 2px 10px auto;
   z-index: 0;

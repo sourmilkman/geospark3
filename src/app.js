@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.8";
+const APP_VERSION = "0.5.9";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -107,6 +107,7 @@ const onPress = (el, fn) => el.addEventListener("pointerup", (event) => {
 let passport = loadPassport();
 let geoData = {};
 let europeMapData = [];
+let worldGlobeData = [];
 let globeRaf = 0;
 let audioReady = false;
 let audioCtx = null;
@@ -193,6 +194,8 @@ async function loadGeoData() {
   geoData = Object.fromEntries(entries);
   const mapResponse = await fetch("data/europe_map.json", { cache: "no-cache" });
   europeMapData = await mapResponse.json();
+  const globeResponse = await fetch("data/world_globe.json", { cache: "no-cache" });
+  worldGlobeData = await globeResponse.json();
 }
 
 function getArchetype() {
@@ -1039,15 +1042,15 @@ function startGlobe() {
   const ctx = canvas.getContext("2d");
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 4);
-    const width = Math.max(1280, Math.round(rect.width * dpr));
-    const height = Math.max(1280, Math.round(rect.height * dpr));
+    const dpr = Math.min(window.devicePixelRatio || 1, 5);
+    const width = Math.max(1600, Math.round(rect.width * dpr));
+    const height = Math.max(1600, Math.round(rect.height * dpr));
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
     }
   }
-  const landmasses = [
+  const fallbackLandmasses = [
     [[-168, 58], [-142, 70], [-96, 72], [-54, 54], [-60, 28], [-86, 14], [-104, 20], [-126, 33], [-150, 48]],
     [[-82, 12], [-64, 8], [-48, -10], [-56, -34], [-70, -56], [-80, -38], [-76, -18]],
     [[-12, 36], [2, 54], [28, 60], [46, 48], [32, 36], [12, 38]],
@@ -1056,6 +1059,7 @@ function startGlobe() {
     [[112, -12], [154, -18], [150, -38], [116, -43], [108, -28]],
     [[-45, 72], [-24, 78], [-18, 62], [-42, 58]],
   ];
+  const fallbackGlobeData = fallbackLandmasses.map((shape) => ({ polygons: [shape] }));
   const islandDots = [
     [-6, 53, 3.2], [-19, 65, 2.4], [14, 35, 1.8], [35, -20, 2], [47, -19, 2.7],
     [73, 4, 1.5], [103, 1, 1.4], [121, 15, 2], [127, -8, 1.8], [174, -41, 2.3],
@@ -1110,21 +1114,48 @@ function startGlobe() {
   }
 
   function drawLand(rotation, radius, cx, cy) {
-    landmasses.forEach((shape) => {
-      ctx.beginPath();
-      let visiblePoints = 0;
-      shape.forEach(([lon, lat]) => {
-        const point = project(lon, lat, rotation, radius, cx, cy);
-        if (point.z <= -0.08) return;
-        if (visiblePoints === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-        visiblePoints += 1;
-      });
-      if (visiblePoints >= 3) {
+    const features = worldGlobeData.length ? worldGlobeData : fallbackGlobeData;
+    features.forEach((feature) => {
+      feature.polygons.forEach((shape) => {
+        let zTotal = 0;
+        shape.forEach(([lon, lat]) => {
+          zTotal += project(lon, lat, rotation, radius, cx, cy).z;
+        });
+        if ((zTotal / shape.length) <= -0.04) return;
+        ctx.beginPath();
+        shape.forEach(([lon, lat], index) => {
+          const point = project(lon, lat, rotation, radius, cx, cy);
+          if (index === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-      }
+      });
+    });
+  }
+
+  function drawCoastGlow(rotation, radius, cx, cy) {
+    const features = worldGlobeData.length ? worldGlobeData : fallbackGlobeData;
+    features.forEach((feature) => {
+      feature.polygons.forEach((shape) => {
+        ctx.beginPath();
+        let started = false;
+        shape.forEach(([lon, lat]) => {
+        const point = project(lon, lat, rotation, radius, cx, cy);
+          if (point.z <= 0.02) {
+            started = false;
+            return;
+          }
+          if (!started) {
+            ctx.moveTo(point.x, point.y);
+            started = true;
+          } else {
+            ctx.lineTo(point.x, point.y);
+          }
+        });
+        ctx.stroke();
+      });
     });
   }
 
@@ -1158,9 +1189,12 @@ function startGlobe() {
     [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].forEach((lon) => drawLongitude(rotation, lon, radius, cx, cy));
 
     ctx.fillStyle = "#35e0b2";
-    ctx.strokeStyle = "rgba(244, 247, 251, 0.24)";
-    ctx.lineWidth = Math.max(1.4, width / 980);
+    ctx.strokeStyle = "rgba(244, 247, 251, 0.28)";
+    ctx.lineWidth = Math.max(1.15, width / 1320);
     drawLand(rotation, radius, cx, cy);
+    ctx.strokeStyle = "rgba(53, 224, 178, 0.34)";
+    ctx.lineWidth = Math.max(1, width / 1800);
+    drawCoastGlow(rotation, radius, cx, cy);
 
     ctx.fillStyle = "#35e0b2";
     islandDots.forEach(([lon, lat, size]) => {
