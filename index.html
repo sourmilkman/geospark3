@@ -20,8 +20,9 @@
   <main class="app" id="app">
     <section class="screen boot-screen" id="boot-screen">
       <img class="splash-art" src="splash_smol.jpg" alt="GeoSpark">
-      <div class="splash-loading">
-        <div class="muted">Loading passport...</div>
+      <div class="splash-cta">
+        <div class="muted" id="splash-status">Loading passport...</div>
+        <button class="primary-btn" id="splash-continue-btn" type="button" disabled>Loading</button>
       </div>
     </section>
 
@@ -83,7 +84,7 @@
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.4.6</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.4.7</div>
     </section>
 
     <section class="screen launch-screen hidden" id="launch-screen">
@@ -173,7 +174,7 @@
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
       <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
-      <div class="version-label" id="result-version">GeoSpark v0.4.6</div>
+      <div class="version-label" id="result-version">GeoSpark v0.4.7</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>

@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.6";
+const APP_VERSION = "0.4.7";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -79,6 +79,7 @@ let geoData = {};
 let globeRaf = 0;
 let audioReady = false;
 let audioCtx = null;
+let splashReadyScreen = "";
 
 const state = {
   view: "boot",
@@ -182,6 +183,13 @@ function setScreen(id) {
   state.view = id;
   if (id === "menu-screen") startGlobe();
   else stopGlobe();
+}
+
+function continueFromSplash() {
+  if (!splashReadyScreen) return;
+  Sound.tap();
+  if (splashReadyScreen === "menu-screen") renderMenu();
+  setScreen(splashReadyScreen);
 }
 
 function flagUrl(cc) {
@@ -905,6 +913,7 @@ function wireEvents() {
     button.classList.add("selected");
   }));
   onPress($("create-passport-btn"), createPassport);
+  onPress($("splash-continue-btn"), continueFromSplash);
   onPress($("journey-btn"), () => startMode("journey"));
   onPress($("challenge-btn"), () => startMode("challenge"));
   onPress($("learning-btn"), () => startLearning("all"));
@@ -931,13 +940,19 @@ async function init() {
   }
   await loadGeoData();
   if (!passport.name) {
-    setScreen("onboarding-screen");
+    splashReadyScreen = "onboarding-screen";
   } else {
     renderMenu();
-    setScreen("menu-screen");
+    splashReadyScreen = "menu-screen";
   }
+  $("splash-status").textContent = "Ready to explore";
+  $("splash-continue-btn").textContent = "Continue";
+  $("splash-continue-btn").disabled = false;
 }
 
 init().catch(() => {
-  $("boot-screen").querySelector(".muted").textContent = "Could not load geography data.";
+  $("splash-status").textContent = "Could not load geography data.";
+  $("splash-continue-btn").textContent = "Retry";
+  $("splash-continue-btn").disabled = false;
+  onPress($("splash-continue-btn"), () => window.location.reload());
 });
