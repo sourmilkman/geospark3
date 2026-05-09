@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.6";
+const APP_VERSION = "0.5.7";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -657,9 +657,7 @@ function renderEuropeMap(map) {
   }).join("");
   const pins = [...EUROPE_MICROSTATES].map((name) => {
     const [left, top] = EUROPE_PIN_POSITIONS[name];
-    const isTarget = name === map.target;
-    const isHighlighted = isTarget && map.mode === "identify";
-    return `<button class="map-pin ${isHighlighted ? "target" : ""}" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left}%;top:${top}%">${escapeHtml(name.slice(0, 2).toUpperCase())}</button>`;
+    return `<button class="map-pin" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left}%;top:${top}%"></button>`;
   }).join("");
   return `
     <div class="europe-map ${map.mode}" role="group" aria-label="Europe map question">
@@ -667,7 +665,6 @@ function renderEuropeMap(map) {
         <svg class="map-svg" viewBox="0 0 ${EUROPE_MAP_BOUNDS.width} ${EUROPE_MAP_BOUNDS.height}" aria-hidden="true">${countries}</svg>
         ${pins}
       </div>
-      <div class="map-inset"><b>Small countries</b><span>Tap enlarged pins for microstates</span></div>
     </div>
   `;
 }
