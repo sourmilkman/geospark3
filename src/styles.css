@@ -1,16 +1,26 @@
 :root {
   color-scheme: dark;
-  --bg: #0b1020;
-  --panel: #121a2c;
-  --panel-2: #17233a;
-  --line: #2a3956;
+  --bg: #06101f;
+  --bg-deep: #020817;
+  --panel: #101b31;
+  --panel-2: #17243d;
+  --panel-glass: rgba(16, 27, 49, 0.9);
+  --line: #314466;
+  --line-bright: #4a6f9f;
   --text: #f4f7fb;
-  --muted: #9aa9bd;
-  --spark: #38d9a9;
-  --sky: #4dabf7;
-  --gold: #ffd166;
-  --danger: #ff6b6b;
-  --ink: #07111e;
+  --muted: #b3bfd0;
+  --spark: #35e0b2;
+  --sky: #52b7ff;
+  --gold: #ffca66;
+  --danger: #ff6b78;
+  --ink: #04111d;
+  --shadow: rgba(0, 0, 0, 0.38);
+  --surface-gradient:
+    linear-gradient(180deg, rgba(16, 27, 49, 0.94), rgba(8, 17, 32, 0.9));
+  --hero-gradient:
+    radial-gradient(circle at 50% 0%, rgba(82, 183, 255, 0.18), transparent 52%),
+    linear-gradient(180deg, rgba(16, 27, 49, 0.9), rgba(5, 13, 26, 0.92));
+  --accent-gradient: linear-gradient(135deg, var(--spark), var(--sky));
 }
 
 * { box-sizing: border-box; }
@@ -23,7 +33,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, Avenir Next, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -44,9 +54,9 @@ button {
   margin: 0 auto;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 8%, rgba(56, 217, 169, 0.16), transparent 28%),
-    radial-gradient(circle at 88% 12%, rgba(77, 171, 247, 0.16), transparent 32%),
-    linear-gradient(180deg, #0b1020 0%, #090d18 100%);
+    radial-gradient(circle at 50% -8%, rgba(82, 183, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 10% 14%, rgba(53, 224, 178, 0.12), transparent 28%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
 }
 
 .screen {
@@ -83,7 +93,7 @@ button {
 
 .boot-screen {
   padding: 0;
-  background: #07111e;
+  background: var(--ink);
   overflow: hidden;
 }
 
@@ -103,7 +113,7 @@ button {
   place-items: center;
   gap: 10px;
   padding: 52px 20px 0;
-  background: linear-gradient(180deg, rgba(7, 17, 30, 0), rgba(7, 17, 30, 0.82));
+  background: linear-gradient(180deg, rgba(4, 17, 29, 0), rgba(4, 17, 29, 0.86));
 }
 
 .splash-cta .primary-btn {
@@ -114,7 +124,7 @@ button {
   width: 86px;
   height: 86px;
   border-radius: 22px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 18px 48px var(--shadow);
 }
 
 .onboarding-art {
@@ -123,7 +133,7 @@ button {
   object-fit: cover;
   object-position: top center;
   border-radius: 8px;
-  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.36);
+  box-shadow: 0 22px 54px var(--shadow);
 }
 
 .mini-mark {
@@ -162,7 +172,7 @@ h1 {
   min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--panel-glass);
   color: var(--text);
   padding: 0 14px;
   outline: none;
@@ -183,7 +193,7 @@ h1 {
 .mode-btn {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(18, 26, 44, 0.92);
+  background: var(--surface-gradient);
   color: var(--text);
   padding: 13px 14px;
   text-align: left;
@@ -193,7 +203,8 @@ h1 {
 .mode-btn:active,
 .mode-btn.active {
   border-color: var(--spark);
-  background: rgba(56, 217, 169, 0.12);
+  background:
+    linear-gradient(180deg, rgba(53, 224, 178, 0.16), rgba(16, 27, 49, 0.9));
 }
 
 .choice-title {
@@ -215,9 +226,10 @@ h1 {
   min-height: 46px;
   border: 0;
   border-radius: 8px;
-  background: var(--spark);
+  background: var(--accent-gradient);
   color: var(--ink);
   font-weight: 900;
+  box-shadow: 0 12px 28px rgba(53, 224, 178, 0.18);
 }
 
 .primary-btn {
@@ -229,7 +241,7 @@ h1 {
   flex: 1;
   min-width: 0;
   border: 1px solid var(--line);
-  background: var(--panel-2);
+  background: var(--surface-gradient);
   color: var(--text);
   font-size: 12px;
 }
@@ -284,9 +296,7 @@ h1 {
 .menu-hero {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(18, 26, 44, 0.78), rgba(18, 26, 44, 0.42)),
-    radial-gradient(circle at 50% 8%, rgba(77, 171, 247, 0.16), transparent 52%);
+  background: var(--hero-gradient);
   padding: 12px;
 }
 
@@ -326,7 +336,7 @@ h1 {
   min-height: 58px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(18, 26, 44, 0.86);
+  background: rgba(16, 27, 49, 0.82);
   padding: 10px;
 }
 
@@ -362,12 +372,14 @@ h1 {
   justify-content: space-between;
   gap: 14px;
   cursor: pointer;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
 }
 
 .mode-btn.primary-mode {
-  border-color: rgba(56, 217, 169, 0.72);
-  background: linear-gradient(135deg, rgba(56, 217, 169, 0.22), rgba(77, 171, 247, 0.12));
+  border-color: rgba(53, 224, 178, 0.72);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(53, 224, 178, 0.2), transparent 42%),
+    var(--surface-gradient);
 }
 
 .mode-btn b {
@@ -387,7 +399,7 @@ h1 {
   flex: 0 0 auto;
   min-width: 58px;
   border-radius: 8px;
-  background: rgba(244, 247, 251, 0.08);
+  background: rgba(82, 183, 255, 0.12);
   color: var(--spark);
   padding: 8px 10px;
   text-align: center;
@@ -412,7 +424,7 @@ h1 {
   width: 150px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--surface-gradient);
   padding: 10px;
 }
 
@@ -436,11 +448,9 @@ h1 {
   width: min(100%, 330px);
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(18, 26, 44, 0.94), rgba(18, 26, 44, 0.78)),
-    radial-gradient(circle at 50% 0%, rgba(56, 217, 169, 0.18), transparent 58%);
+  background: var(--hero-gradient);
   padding: 24px;
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 22px 70px var(--shadow);
 }
 
 .launch-panel h1 {
@@ -464,7 +474,7 @@ h1 {
   height: 100%;
   width: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--spark), var(--sky));
+  background: var(--accent-gradient);
   transform-origin: left center;
   animation: launchFill 900ms ease forwards;
 }
@@ -508,7 +518,7 @@ h1 {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--surface-gradient);
   color: var(--muted);
   padding: 0 12px;
   font-size: 12px;
@@ -517,7 +527,7 @@ h1 {
 
 .learn-tab.active {
   border-color: var(--spark);
-  background: rgba(56, 217, 169, 0.12);
+  background: rgba(53, 224, 178, 0.14);
   color: var(--text);
 }
 
@@ -535,7 +545,7 @@ h1 {
   min-height: 72px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(18, 26, 44, 0.9);
+  background: var(--surface-gradient);
   display: grid;
   grid-template-columns: 58px 1fr;
   align-items: center;
@@ -602,7 +612,7 @@ h1 {
 .progress-track div {
   width: 0%;
   height: 100%;
-  background: linear-gradient(90deg, var(--spark), var(--sky));
+  background: var(--accent-gradient);
   transition: width 220ms ease;
 }
 
@@ -677,7 +687,7 @@ h1 {
 .run-progress {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(18, 26, 44, 0.76);
+  background: var(--surface-gradient);
   padding: 10px 12px;
 }
 
@@ -723,7 +733,7 @@ h1 {
 .question-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(18, 26, 44, 0.92);
+  background: var(--surface-gradient);
   min-height: 206px;
   padding: 16px;
   text-align: center;
@@ -752,7 +762,7 @@ h1 {
 .flag-display img {
   width: 96px;
   border-radius: 6px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
 }
 
 .question-panel h2 {
@@ -777,7 +787,7 @@ h1 {
   min-height: 52px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--surface-gradient);
   color: var(--text);
   padding: 12px 14px;
   text-align: left;
@@ -786,7 +796,7 @@ h1 {
 
 .answer-btn.correct {
   border-color: var(--spark);
-  background: rgba(56, 217, 169, 0.16);
+  background: rgba(53, 224, 178, 0.16);
 }
 
 .answer-btn.wrong {
@@ -812,7 +822,7 @@ h1 {
   display: grid;
   place-items: center;
   padding: 22px;
-  background: rgba(7, 17, 30, 0.42);
+  background: rgba(4, 17, 29, 0.52);
   z-index: 5;
 }
 
@@ -820,10 +830,10 @@ h1 {
   width: min(100%, 300px);
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--surface-gradient);
   padding: 22px;
   text-align: center;
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 22px 70px var(--shadow);
 }
 
 .pause-panel h2 {

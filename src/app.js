@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.9";
+const APP_VERSION = "0.5.0";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -869,9 +869,9 @@ function startGlobe() {
     ctx.clearRect(0, 0, width, height);
 
     const ocean = ctx.createRadialGradient(cx - radius * 0.32, cy - radius * 0.36, radius * 0.1, cx, cy, radius);
-    ocean.addColorStop(0, "#245a86");
-    ocean.addColorStop(0.6, "#123b64");
-    ocean.addColorStop(1, "#07172b");
+    ocean.addColorStop(0, "#2c6f9f");
+    ocean.addColorStop(0.6, "#123f6d");
+    ocean.addColorStop(1, "#06101f");
     ctx.fillStyle = ocean;
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -882,17 +882,17 @@ function startGlobe() {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.strokeStyle = "rgba(166, 211, 255, 0.16)";
+    ctx.strokeStyle = "rgba(179, 191, 208, 0.16)";
     ctx.lineWidth = Math.max(1, width / 1280);
     [-60, -30, 0, 30, 60].forEach((lat) => drawLatitude(rotation, lat, radius, cx, cy));
     [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].forEach((lon) => drawLongitude(rotation, lon, radius, cx, cy));
 
-    ctx.fillStyle = "#35d49f";
+    ctx.fillStyle = "#35e0b2";
     ctx.strokeStyle = "rgba(244, 247, 251, 0.24)";
     ctx.lineWidth = Math.max(1.4, width / 980);
     drawLand(rotation, radius, cx, cy);
 
-    ctx.fillStyle = "#38d9a9";
+    ctx.fillStyle = "#35e0b2";
     islandDots.forEach(([lon, lat, size]) => {
       const point = project(lon, lat, rotation, radius, cx, cy);
       if (point.z <= 0) return;
@@ -924,7 +924,7 @@ function startGlobe() {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(77, 171, 247, 0.44)";
+    ctx.strokeStyle = "rgba(82, 183, 255, 0.44)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
