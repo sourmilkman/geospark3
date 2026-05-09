@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.4.3";
+const APP_VERSION = "0.4.4";
 const ARCHETYPES = {
   historian: { label: "The Historian", questionsPerLevel: 15, levelsPerStage: 7 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
@@ -143,6 +143,14 @@ function isCountry(item) {
   return item.continent !== "US States" && !item.cc.includes("-");
 }
 
+function isUSState(item) {
+  return item.continent === "US States" && item.cc.startsWith("us-");
+}
+
+function stateAbbr(item) {
+  return item.cc.replace("us-", "").toUpperCase();
+}
+
 function journeyDifficultyBand() {
   if (state.mode !== "journey" || passport.journey.stage !== 1) return 3;
   const levels = getArchetype().levelsPerStage;
@@ -170,7 +178,6 @@ function setScreen(id) {
 }
 
 function flagUrl(cc) {
-  if (cc.startsWith("us-")) return "https://flagcdn.com/w160/us.png";
   return `https://flagcdn.com/w160/${cc}.png`;
 }
 
@@ -371,17 +378,52 @@ function questionPool() {
 function pickQuestion() {
   const pool = questionPool();
   const countryPool = pool.filter(isCountry);
+  const usStatePool = pool.filter(isUSState);
   const eligible = pool.filter((item) => !state.recent.includes(item.name));
   const source = eligible.length >= 4 ? eligible : pool;
-  const type = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)];
+  const canAskStateCode = usStatePool.length >= 4;
+  const type = canAskStateCode && Math.random() < 0.32
+    ? (Math.random() < 0.5 ? "stateCode" : "stateAbbr")
+    : QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)];
   const answerSource = type === "flag" ? source.filter(isCountry) : source;
   const fallbackSource = type === "flag" ? countryPool : pool;
   const answerPool = answerSource.length >= 4 ? answerSource : fallbackSource;
-  const answer = answerPool[Math.floor(Math.random() * answerPool.length)];
+  const stateAnswerSource = usStatePool.filter((item) => !state.recent.includes(item.name));
+  const isStateDrill = type === "stateCode" || type === "stateAbbr";
+  const finalAnswerPool = isStateDrill
+    ? (stateAnswerSource.length >= 4 ? stateAnswerSource : usStatePool)
+    : answerPool;
+  const answer = finalAnswerPool[Math.floor(Math.random() * finalAnswerPool.length)];
   state.recent.push(answer.name);
   if (state.recent.length > 8) state.recent.shift();
-  const distractorPool = type === "flag" ? countryPool : pool;
+  const distractorPool = isStateDrill ? usStatePool : type === "flag" ? countryPool : pool;
   const wrongs = shuffle(distractorPool.filter((item) => item.name !== answer.name)).slice(0, 3);
+
+  if (type === "stateCode") {
+    return {
+      type,
+      answer,
+      correct: answer.name,
+      badge: "State Flag to State",
+      prompt: stateAbbr(answer),
+      subtitle: "Which US state uses this flag?",
+      flag: answer.cc,
+      options: shuffle([answer.name, ...wrongs.map((item) => item.name)]),
+    };
+  }
+
+  if (type === "stateAbbr") {
+    return {
+      type,
+      answer,
+      correct: stateAbbr(answer),
+      badge: "State Flag to Code",
+      prompt: answer.name,
+      subtitle: "Which abbreviation matches this state?",
+      flag: answer.cc,
+      options: shuffle([stateAbbr(answer), ...wrongs.map((item) => stateAbbr(item))]),
+    };
+  }
 
   if (type === "capital") {
     return {
