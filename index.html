@@ -27,7 +27,17 @@
     </section>
 
     <section class="screen onboarding hidden" id="onboarding-screen" aria-labelledby="onboarding-title">
-      <img class="onboarding-art" src="charSelection.png" alt="">
+      <div class="character-carousel" id="character-carousel" aria-label="Choose your character">
+        <button class="character-option selected is-center" type="button" data-archetype="historian" aria-label="Choose The Historian" aria-pressed="true">
+          <img src="assets/menu/main_historian.png" alt="">
+        </button>
+        <button class="character-option is-right" type="button" data-archetype="backpacker" aria-label="Choose The Backpacker" aria-pressed="false">
+          <img src="assets/menu/main_backpacker.png" alt="">
+        </button>
+        <button class="character-option is-left" type="button" data-archetype="pilot" aria-label="Choose The Pilot" aria-pressed="false">
+          <img src="assets/menu/main_pilot.png" alt="">
+        </button>
+      </div>
       <h1 id="onboarding-title">GeoSpark</h1>
       <p class="screen-copy">Create your passport and choose the shape of your journey.</p>
       <label class="field-label" for="player-name">Name</label>

@@ -136,6 +136,79 @@ button {
   box-shadow: 0 22px 54px var(--shadow);
 }
 
+.character-carousel {
+  position: relative;
+  width: min(100%, 360px);
+  height: clamp(190px, 31dvh, 270px);
+  margin-bottom: -2px;
+  perspective: 720px;
+  border-radius: 8px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 55%, rgba(53, 224, 178, 0.2), transparent 26%),
+    radial-gradient(circle at 50% 18%, rgba(82, 183, 255, 0.2), transparent 42%),
+    linear-gradient(180deg, rgba(13, 31, 54, 0.96), rgba(5, 13, 26, 0.96));
+  box-shadow: 0 22px 54px var(--shadow);
+}
+
+.character-carousel::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 42%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(5, 13, 26, 0.92));
+  z-index: 5;
+}
+
+.character-option {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 38%;
+  height: 94%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform-origin: 50% 82%;
+  transition: transform 360ms cubic-bezier(.2, .8, .2, 1), opacity 260ms ease, filter 260ms ease;
+  will-change: transform, opacity;
+}
+
+.character-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.45));
+}
+
+.character-option.is-center {
+  z-index: 4;
+  opacity: 1;
+  filter: saturate(1.08) brightness(1.05);
+  transform: translateX(-50%) translateY(-2px) scale(1.08) rotateY(0deg);
+}
+
+.character-option.is-left {
+  z-index: 3;
+  opacity: 0.72;
+  filter: saturate(0.82) brightness(0.82);
+  transform: translateX(-122%) translateY(20px) scale(0.84) rotateY(26deg);
+}
+
+.character-option.is-right {
+  z-index: 3;
+  opacity: 0.72;
+  filter: saturate(0.82) brightness(0.82);
+  transform: translateX(22%) translateY(20px) scale(0.84) rotateY(-26deg);
+}
+
+.character-option:active {
+  transition-duration: 120ms;
+}
+
 .mini-mark {
   width: 46px;
   height: 46px;

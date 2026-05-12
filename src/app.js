@@ -15,6 +15,7 @@ const ARCHETYPES = {
   backpacker: { label: "The Backpacker", questionsPerLevel: 10, levelsPerStage: 12 },
   pilot: { label: "The Pilot", questionsPerLevel: 5, levelsPerStage: 20 },
 };
+const ARCHETYPE_ORDER = ["historian", "backpacker", "pilot"];
 const MENU_CHARACTER_ART = {
   historian: "assets/menu/main_historian.png",
   backpacker: "assets/menu/main_backpacker.png",
@@ -403,7 +404,7 @@ function confirmNewGame() {
   localStorage.removeItem(STORAGE_KEY);
   passport = defaultPassport();
   $("player-name").value = "";
-  document.querySelectorAll(".choice-card").forEach((item) => item.classList.toggle("selected", item.dataset.archetype === "historian"));
+  selectArchetype("historian");
   $("new-game-dialog").classList.add("hidden");
   stopTimer();
   state.running = false;
@@ -450,6 +451,26 @@ function renderLearning() {
 function selectedArchetype() {
   const selected = document.querySelector(".choice-card.selected");
   return selected?.dataset.archetype || "historian";
+}
+
+function selectArchetype(archetype) {
+  const selected = ARCHETYPES[archetype] ? archetype : "historian";
+  const selectedIndex = ARCHETYPE_ORDER.indexOf(selected);
+  const left = ARCHETYPE_ORDER[(selectedIndex + ARCHETYPE_ORDER.length - 1) % ARCHETYPE_ORDER.length];
+  const right = ARCHETYPE_ORDER[(selectedIndex + 1) % ARCHETYPE_ORDER.length];
+
+  document.querySelectorAll(".choice-card").forEach((item) => {
+    item.classList.toggle("selected", item.dataset.archetype === selected);
+  });
+
+  document.querySelectorAll(".character-option").forEach((item) => {
+    const id = item.dataset.archetype;
+    item.classList.toggle("selected", id === selected);
+    item.classList.toggle("is-center", id === selected);
+    item.classList.toggle("is-left", id === left);
+    item.classList.toggle("is-right", id === right);
+    item.setAttribute("aria-pressed", id === selected ? "true" : "false");
+  });
 }
 
 function createPassport() {
@@ -1282,8 +1303,12 @@ function wireEvents() {
   document.querySelectorAll(".choice-card").forEach((button) => onPress(button, () => {
     unlockAudio();
     Sound.tap();
-    document.querySelectorAll(".choice-card").forEach((item) => item.classList.remove("selected"));
-    button.classList.add("selected");
+    selectArchetype(button.dataset.archetype);
+  }));
+  document.querySelectorAll(".character-option").forEach((button) => onPress(button, () => {
+    unlockAudio();
+    Sound.tap();
+    selectArchetype(button.dataset.archetype);
   }));
   onPress($("create-passport-btn"), createPassport);
   onPress($("splash-continue-btn"), continueFromSplash);
@@ -1332,6 +1357,7 @@ function wireEvents() {
 
 async function init() {
   wireEvents();
+  selectArchetype(selectedArchetype());
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
