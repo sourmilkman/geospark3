@@ -674,7 +674,7 @@ h1 {
   gap: 12px;
 }
 
-.game-screen.paused > :not(.pause-overlay) {
+.game-screen.paused > :not(.pause-overlay):not(.confirm-overlay) {
   filter: blur(4px);
   pointer-events: none;
   user-select: none;

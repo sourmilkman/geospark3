@@ -102,7 +102,7 @@
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.5.11</div>
+      <div class="version-label" id="menu-version">GeoSpark v0.5.12</div>
 
       <div class="confirm-overlay hidden" id="new-game-dialog" role="dialog" aria-modal="true" aria-labelledby="new-game-title">
         <div class="confirm-panel">
@@ -198,6 +198,18 @@
         </div>
       </div>
 
+      <div class="confirm-overlay hidden" id="abandon-run-dialog" role="dialog" aria-modal="true" aria-labelledby="abandon-run-title">
+        <div class="confirm-panel">
+          <div class="eyebrow">Journey Penalty</div>
+          <h2 id="abandon-run-title">Leave this run?</h2>
+          <p id="abandon-run-copy">Leaving now will apply the Journey penalty.</p>
+          <div class="confirm-actions">
+            <button class="secondary-btn" id="abandon-run-cancel-btn" type="button">Keep Playing</button>
+            <button class="primary-btn danger-btn" id="abandon-run-confirm-btn" type="button">Leave Journey</button>
+          </div>
+        </div>
+      </div>
+
       <div class="stage-unlock-overlay hidden" id="stage-unlock-overlay" role="dialog" aria-modal="true" aria-labelledby="stage-unlock-title">
         <div class="stage-unlock-panel">
           <div class="eyebrow">Stage Unlocked</div>
@@ -225,7 +237,7 @@
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
       <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
-      <div class="version-label" id="result-version">GeoSpark v0.5.11</div>
+      <div class="version-label" id="result-version">GeoSpark v0.5.12</div>
       <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
     </section>
   </main>

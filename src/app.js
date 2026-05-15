@@ -1,5 +1,6 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.11";
+const ACTIVE_SESSION_KEY = "geospark3.activeJourneySession";
+const APP_VERSION = "0.5.12";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -168,8 +169,29 @@ function savePassport() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(passport));
 }
 
+function markJourneySessionOpen() {
+  try {
+    sessionStorage.setItem(ACTIVE_SESSION_KEY, "1");
+  } catch (_) {}
+}
+
+function clearJourneySessionOpen() {
+  try {
+    sessionStorage.removeItem(ACTIVE_SESSION_KEY);
+  } catch (_) {}
+}
+
+function hasOpenJourneySession() {
+  try {
+    return sessionStorage.getItem(ACTIVE_SESSION_KEY) === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
 function markActiveJourneyRun() {
   if (state.mode !== "journey" || !state.running) return;
+  markJourneySessionOpen();
   passport.activeRun = {
     mode: "journey",
     stage: passport.journey.stage,
@@ -182,6 +204,7 @@ function markActiveJourneyRun() {
 }
 
 function clearActiveRun() {
+  clearJourneySessionOpen();
   if (!passport.activeRun) return;
   passport.activeRun = null;
   savePassport();
@@ -273,6 +296,7 @@ function continueFromSplash() {
   if (targetScreen === "game-screen" && splashPausedRun && state.running && state.mode !== "zen") {
     state.paused = false;
     $("game-screen").classList.remove("paused");
+    $("pause-overlay").classList.add("hidden");
     startTimer();
   }
   splashPausedRun = false;
@@ -522,6 +546,7 @@ function launchMode(mode) {
   $("game-screen").classList.toggle("zen-mode", mode === "zen");
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
+  $("abandon-run-dialog").classList.add("hidden");
   $("stage-unlock-overlay").classList.add("hidden");
   $("journey-progress-track").classList.toggle("hidden", mode !== "journey");
   $("tool-row").classList.toggle("hidden", mode !== "journey");
@@ -999,26 +1024,35 @@ function resumeGame() {
   state.paused = false;
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
+  $("abandon-run-dialog").classList.add("hidden");
   startTimer();
 }
 
-function applyJourneyFailurePenalty() {
+function previewJourneyFailurePenalty() {
   const oldGeoSparks = passport.currencies.geoSparks;
   const oldAirMiles = passport.currencies.airMiles;
   const oldLevel = passport.journey.level;
-  passport.currencies.geoSparks = Math.floor(oldGeoSparks * JOURNEY_FAILURE_KEEP_RATIO);
-  passport.currencies.airMiles = Math.floor(oldAirMiles * JOURNEY_FAILURE_KEEP_RATIO);
-  passport.journey.level = Math.max(0, oldLevel - 2);
-  state.levelProgress = 0;
-  passport.activeRun = null;
+  const keptGeoSparks = Math.floor(oldGeoSparks * JOURNEY_FAILURE_KEEP_RATIO);
+  const keptAirMiles = Math.floor(oldAirMiles * JOURNEY_FAILURE_KEEP_RATIO);
   return {
-    geoSparks: oldGeoSparks - passport.currencies.geoSparks,
-    airMiles: oldAirMiles - passport.currencies.airMiles,
+    geoSparks: oldGeoSparks - keptGeoSparks,
+    airMiles: oldAirMiles - keptAirMiles,
     oldLevel,
-    newLevel: passport.journey.level,
+    newLevel: Math.max(0, oldLevel - 2),
     questionsPerLevel: getArchetype().questionsPerLevel,
     levelsPerStage: getArchetype().levelsPerStage,
   };
+}
+
+function applyJourneyFailurePenalty() {
+  const penalty = previewJourneyFailurePenalty();
+  passport.currencies.geoSparks -= penalty.geoSparks;
+  passport.currencies.airMiles -= penalty.airMiles;
+  passport.journey.level = penalty.newLevel;
+  state.levelProgress = 0;
+  passport.activeRun = null;
+  clearJourneySessionOpen();
+  return penalty;
 }
 
 function journeyPenaltyCopy(penalty) {
@@ -1027,14 +1061,40 @@ function journeyPenaltyCopy(penalty) {
 
 function recoverAbandonedJourney() {
   if (passport.activeRun?.mode !== "journey") return null;
+  if (hasOpenJourneySession()) return null;
   const penalty = applyJourneyFailurePenalty();
   savePassport();
   return penalty;
 }
 
+function openAbandonRunDialog() {
+  if (!state.running || state.mode !== "journey") return;
+  Sound.tap();
+  state.timerMs = Math.max(0, state.timerEndsAt - performance.now());
+  state.paused = true;
+  stopTimer();
+  $("abandon-run-copy").textContent = `Leaving now will apply the Journey penalty. ${journeyPenaltyCopy(previewJourneyFailurePenalty())}`;
+  $("abandon-run-dialog").classList.remove("hidden");
+}
+
+function closeAbandonRunDialog() {
+  if (!$("abandon-run-dialog").classList.contains("hidden")) Sound.tap();
+  $("abandon-run-dialog").classList.add("hidden");
+  if (!state.running || state.mode === "zen") return;
+  state.paused = false;
+  startTimer();
+}
+
+function confirmAbandonRun() {
+  Sound.tap();
+  $("abandon-run-dialog").classList.add("hidden");
+  finishRun("Run abandoned");
+}
+
 function finishRun(reason) {
   stopTimer();
   state.running = false;
+  state.paused = false;
   const journeyFailed = state.mode === "journey" && (reason === "Out of lives" || reason === "Run abandoned");
   const penalty = journeyFailed ? applyJourneyFailurePenalty() : null;
   if (state.mode === "challenge" && state.score > passport.best.challenge) {
@@ -1042,6 +1102,9 @@ function finishRun(reason) {
   }
   if (!journeyFailed) clearActiveRun();
   savePassport();
+  $("game-screen").classList.remove("paused");
+  $("pause-overlay").classList.add("hidden");
+  $("abandon-run-dialog").classList.add("hidden");
   $("result-title").textContent = reason;
   $("result-copy").textContent = journeyFailed
     ? journeyPenaltyCopy(penalty)
@@ -1056,7 +1119,7 @@ function finishRun(reason) {
 function backToMenu() {
   clearTimeout(state.launchTimer);
   if (state.running && state.mode === "journey") {
-    finishRun("Run abandoned");
+    openAbandonRunDialog();
     return;
   }
   stopTimer();
@@ -1065,6 +1128,7 @@ function backToMenu() {
   clearActiveRun();
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
+  $("abandon-run-dialog").classList.add("hidden");
   $("stage-unlock-overlay").classList.add("hidden");
   renderMenu();
   setScreen("menu-screen");
@@ -1330,6 +1394,8 @@ function wireEvents() {
   onPress($("learn-back-btn"), backToMenu);
   onPress($("pause-btn"), pauseGame);
   onPress($("resume-btn"), resumeGame);
+  onPress($("abandon-run-cancel-btn"), closeAbandonRunDialog);
+  onPress($("abandon-run-confirm-btn"), confirmAbandonRun);
   onPress($("stage-unlock-continue-btn"), continueStageUnlock);
   onPress($("result-menu-btn"), backToMenu);
   onPress($("result-learning-btn"), () => startLearning("all"));
@@ -1348,9 +1414,11 @@ function wireEvents() {
       hiddenAt = Date.now();
       lastVisibleScreen = state.view === "boot-screen" ? splashReadyScreen : state.view;
       if (state.running && state.mode !== "zen") {
+        const wasPaused = state.paused;
+        if (!wasPaused) state.timerMs = Math.max(0, state.timerEndsAt - performance.now());
         stopTimer();
         state.paused = true;
-        splashPausedRun = true;
+        splashPausedRun = !wasPaused;
       }
       return;
     }
@@ -1358,7 +1426,15 @@ function wireEvents() {
       showSplashGate(lastVisibleScreen, "Welcome back");
       return;
     }
-    if (state.running && state.mode !== "zen" && !state.paused) startTimer();
+    if (state.running && state.mode !== "zen" && splashPausedRun) {
+      state.paused = false;
+      $("game-screen").classList.remove("paused");
+      $("pause-overlay").classList.add("hidden");
+      startTimer();
+      splashPausedRun = false;
+    } else if (state.running && state.mode !== "zen" && !state.paused) {
+      startTimer();
+    }
   });
 }
 
