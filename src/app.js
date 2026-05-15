@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.5.10";
+const APP_VERSION = "0.5.11";
 const AUTO_CORRECT_COST = 50;
 const SKIP_LEVEL_COST = 750;
 const ZEN_UNLOCK_COST = 5000;
@@ -1005,17 +1005,24 @@ function resumeGame() {
 function applyJourneyFailurePenalty() {
   const oldGeoSparks = passport.currencies.geoSparks;
   const oldAirMiles = passport.currencies.airMiles;
+  const oldLevel = passport.journey.level;
   passport.currencies.geoSparks = Math.floor(oldGeoSparks * JOURNEY_FAILURE_KEEP_RATIO);
   passport.currencies.airMiles = Math.floor(oldAirMiles * JOURNEY_FAILURE_KEEP_RATIO);
-  passport.journey.level = 0;
+  passport.journey.level = Math.max(0, oldLevel - 2);
   state.levelProgress = 0;
   passport.activeRun = null;
   return {
     geoSparks: oldGeoSparks - passport.currencies.geoSparks,
     airMiles: oldAirMiles - passport.currencies.airMiles,
+    oldLevel,
+    newLevel: passport.journey.level,
     questionsPerLevel: getArchetype().questionsPerLevel,
     levelsPerStage: getArchetype().levelsPerStage,
   };
+}
+
+function journeyPenaltyCopy(penalty) {
+  return `Stage ${passport.journey.stage} stays unlocked. Level reduced from ${penalty.oldLevel}/${penalty.levelsPerStage} to ${penalty.newLevel}/${penalty.levelsPerStage} and questions reset to 0/${penalty.questionsPerLevel}. Penalty: -${penalty.geoSparks} GeoSparks and -${penalty.airMiles} AirMiles.`;
 }
 
 function recoverAbandonedJourney() {
@@ -1037,7 +1044,7 @@ function finishRun(reason) {
   savePassport();
   $("result-title").textContent = reason;
   $("result-copy").textContent = journeyFailed
-    ? `Stage ${passport.journey.stage} stays unlocked. Level reset to 0/${penalty.levelsPerStage} and questions reset to 0/${penalty.questionsPerLevel}. Penalty: -${penalty.geoSparks} GeoSparks and -${penalty.airMiles} AirMiles.`
+    ? journeyPenaltyCopy(penalty)
     : state.studySuggested
       ? "A few misses came close together. Spend a little time in Learning mode, then come back sharper."
       : state.mode === "challenge" ? `Best challenge score: ${passport.best.challenge}` : `Passport updated for ${passport.name}.`;
@@ -1369,7 +1376,7 @@ async function init() {
     renderMenu();
     if (recoveredPenalty) {
       $("result-title").textContent = "Run abandoned";
-      $("result-copy").textContent = `Your last Journey run closed before it was resolved. Stage ${passport.journey.stage} stays unlocked. Level reset to 0/${recoveredPenalty.levelsPerStage} and questions reset to 0/${recoveredPenalty.questionsPerLevel}. Penalty: -${recoveredPenalty.geoSparks} GeoSparks and -${recoveredPenalty.airMiles} AirMiles.`;
+      $("result-copy").textContent = `Your last Journey run closed before it was resolved. ${journeyPenaltyCopy(recoveredPenalty)}`;
       $("result-score").textContent = "0";
       $("result-learning-btn").classList.add("hidden");
       readySplash("result-screen");
