@@ -2,7 +2,7 @@
 
 A mobile-first geography progression game (PWA, also wrapped for Android as a TWA in `GeoSparkTWA/`).
 
-Current game version: `0.6.4`
+Current game version: `0.6.5`
 
 ## Versioning
 

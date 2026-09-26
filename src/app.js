@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.6.4";
+const APP_VERSION = "0.6.5";
 const PASSPORT_VERSION = 2;
 
 // Pacing is shared by every character so characters can be switched without losing progress.
@@ -128,16 +128,18 @@ const EUROPE_CORE = new Set([
 const ENABLE_MAP_SELECT = false;
 const EUROPE_MAP_LEVEL_START = 5; // level number (1-based) in Stage 1 for non-Pilot characters
 const EUROPE_MICROSTATES = new Set(["Andorra", "Liechtenstein", "Luxembourg", "Malta", "Monaco", "San Marino", "Vatican City"]);
-const EUROPE_PIN_POSITIONS = {
-  Andorra: [26.3, 54.4],
-  Liechtenstein: [49.6, 43.7],
-  Luxembourg: [40.2, 39.3],
-  Malta: [55.2, 66.4],
-  Monaco: [43.4, 51.2],
-  "San Marino": [50.9, 51.7],
-  "Vatican City": [48.9, 56.6],
+// Real [longitude, latitude] of each microstate; pins are projected with the map itself.
+const EUROPE_PIN_COORDS = {
+  Andorra: [1.52, 42.51],
+  Liechtenstein: [9.55, 47.14],
+  Luxembourg: [6.13, 49.61],
+  Malta: [14.44, 35.9],
+  Monaco: [7.42, 43.74],
+  "San Marino": [12.45, 43.94],
+  "Vatican City": [12.45, 41.9],
 };
 const MAP_COLORS = ["#7fd8d8", "#e4869b", "#b8e27f", "#c49be8", "#e5b07e", "#93bdea", "#80d99a", "#d783c8", "#d7d577"];
+const SMALL_TARGET_UNITS = 5; // map units (board is 100 wide)
 const EUROPE_MAP_BOUNDS = { minLon: -25, maxLon: 45, minLat: 34, maxLat: 72, width: 100, height: 72 };
 
 // Passport stamp artwork per journey stage (Tom's illustrations).
@@ -1549,16 +1551,22 @@ function renderEuropeMap(map) {
     return `<button class="map-country-pad" type="button" data-answer="${escapeHtml(feature.name)}" aria-label="${escapeHtml(feature.name)}" style="left:${bounds.cx}%;top:${bounds.cy}%;width:${size}px;height:${size}px"></button>`;
   }).join("") : "";
   const pins = [...EUROPE_MICROSTATES].map((name) => {
-    const [left, top] = EUROPE_PIN_POSITIONS[name];
+    const [left, top] = europeMapPercent(...EUROPE_PIN_COORDS[name]);
     const isTarget = map.mode === "identify" && map.target === name;
     return `<button class="map-pin ${isTarget ? "target" : ""}" type="button" data-answer="${escapeHtml(name)}" aria-label="${escapeHtml(name)}" style="left:${left}%;top:${top}%"></button>`;
   }).join("");
+  // Small (non-microstate) targets also get a ring so they can't be missed.
+  const targetFeature = map.mode === "identify" && !EUROPE_MICROSTATES.has(map.target)
+    ? europeMapCache.find((feature) => feature.name === map.target) : null;
+  const focusRing = targetFeature?.bounds && Math.max(targetFeature.bounds.width, targetFeature.bounds.height) < SMALL_TARGET_UNITS
+    ? `<span class="map-pin target focus-ring" aria-hidden="true" style="left:${targetFeature.bounds.cx}%;top:${targetFeature.bounds.cy}%"></span>` : "";
   return `
     <div class="europe-map ${map.mode}" role="group" aria-label="Europe map question">
       <div class="map-board">
         <svg class="map-svg" viewBox="0 0 ${EUROPE_MAP_BOUNDS.width} ${EUROPE_MAP_BOUNDS.height}" aria-hidden="true">${countryPaths}${countryHitAreas}</svg>
         ${pads}
         ${pins}
+        ${focusRing}
       </div>
     </div>
   `;
@@ -1591,8 +1599,8 @@ function geometryProjectedBounds(geometry) {
   });
   if (minX === Infinity) return null;
   return {
-    cx: ((minX + maxX) / 2).toFixed(2),
-    cy: ((minY + maxY) / 2).toFixed(2),
+    cx: ((minX + maxX) / 2 / EUROPE_MAP_BOUNDS.width * 100).toFixed(2),
+    cy: ((minY + maxY) / 2 / EUROPE_MAP_BOUNDS.height * 100).toFixed(2),
     width: maxX - minX,
     height: maxY - minY,
   };
@@ -1609,6 +1617,12 @@ function ringInEurope(ring) {
     && bounds.minLon <= EUROPE_MAP_BOUNDS.maxLon + 8
     && bounds.maxLat >= EUROPE_MAP_BOUNDS.minLat - 4
     && bounds.minLat <= EUROPE_MAP_BOUNDS.maxLat + 4;
+}
+
+// Map position as % of the board (pins and pads are absolutely positioned over the SVG).
+function europeMapPercent(lon, lat) {
+  const [x, y] = projectEuropePoint(lon, lat);
+  return [(x / EUROPE_MAP_BOUNDS.width * 100).toFixed(2), (y / EUROPE_MAP_BOUNDS.height * 100).toFixed(2)];
 }
 
 function projectEuropePoint(lon, lat) {
@@ -2635,4 +2649,4 @@ init().catch(() => {
 });
 
 // Test hook (used by automated checks; harmless in production).
-window.__geospark = { state, get passport() { return passport; }, get settings() { return settings; }, Music, ARCHETYPES, BADGES, checkBadges, APP_VERSION };
+window.__geospark = { state, get passport() { return passport; }, get settings() { return settings; }, Music, ARCHETYPES, BADGES, checkBadges, APP_VERSION, renderEuropeMap };

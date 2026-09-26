@@ -895,7 +895,7 @@ h1 {
 .map-board {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.42;
+  aspect-ratio: 100 / 72; /* must match the SVG viewBox so pins line up */
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -951,6 +951,11 @@ h1 {
   padding: 0;
   transform: translate(-50%, -50%);
   z-index: 8;
+}
+
+/* Identify questions: mute everything except the target so no pink neighbour reads as "highlighted". */
+.europe-map.identify .map-country:not(.target) {
+  filter: saturate(0.45) brightness(0.72);
 }
 
 .map-svg .map-country.target {
