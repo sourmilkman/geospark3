@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.6.3";
+const APP_VERSION = "0.6.4";
 const PASSPORT_VERSION = 2;
 
 // Pacing is shared by every character so characters can be switched without losing progress.
@@ -377,74 +377,148 @@ function saveSettings() {
 // ─────────────────────────────────────────────
 // Music: one looping track for menus, one for gameplay, crossfaded.
 // Files are Tom's; if a file is missing the game simply stays silent.
+// Each file is the loop (length `loop` seconds) plus a 2s copy of its head
+// appended. Two <audio> elements per track hand off just before the loop
+// point, which avoids the gap native `loop` leaves on Chromium/Android.
 // ─────────────────────────────────────────────
 const MUSIC_TRACKS = {
-  menu: "assets/music/menu.mp3",
-  game: "assets/music/gameplay.mp3",
+  menu: { src: "assets/music/menu.mp3", loop: 146.0767 },
+  game: { src: "assets/music/gameplay.mp3", loop: 108.2282 },
 };
 const MUSIC_FADE_MS = 900;
 const MUSIC_DUCK = 0.3;
+const MUSIC_HANDOFF_S = 0.03;
+const MUSIC_XFADE_MS = 250;
 
 const Music = (() => {
-  const players = {};
-  const fades = {};
+  const tracks = {};
   let current = null;
   let wanted = null;
   let unlocked = false;
   let ducked = false;
+  let timer = null;
 
   function target() {
     return (settings.musicVolume / 100) * (ducked ? MUSIC_DUCK : 1);
   }
 
-  function player(name) {
-    if (!players[name]) {
-      const audio = new Audio();
-      audio.src = MUSIC_TRACKS[name];
-      audio.loop = true;
-      audio.preload = "none";
-      audio.volume = 0;
-      players[name] = audio;
+  function track(name) {
+    if (!tracks[name]) {
+      const cfg = MUSIC_TRACKS[name];
+      const t = { name, cfg, els: [], active: 0, level: 0, fade: null, xfade: null, playing: false };
+      for (let i = 0; i < 2; i += 1) {
+        const audio = new Audio();
+        audio.preload = "auto";
+        audio.loop = false;
+        audio.volume = 0;
+        audio.src = cfg.src;
+        audio.addEventListener("ended", () => {
+          // Fallback if the handoff was missed (e.g. a stalled timer).
+          if (!t.playing || t.els[t.active] !== audio) return;
+          const next = t.els[1 - t.active];
+          next.currentTime = Math.max(0, (audio.duration || cfg.loop) - cfg.loop);
+          safePlay(next);
+          t.active = 1 - t.active;
+          t.xfade = null;
+        });
+        t.els.push(audio);
+      }
+      tracks[name] = t;
     }
-    return players[name];
+    return tracks[name];
   }
 
-  function fade(name, to, ms, done) {
-    const audio = players[name];
-    if (!audio) return;
-    clearInterval(fades[name]);
-    const from = audio.volume;
-    const started = performance.now();
-    fades[name] = setInterval(() => {
-      const t = Math.min(1, (performance.now() - started) / ms);
-      audio.volume = Math.max(0, Math.min(1, from + (to - from) * t));
-      if (t >= 1) {
-        clearInterval(fades[name]);
-        if (done) done();
+  function safePlay(audio) {
+    const attempt = audio.play();
+    if (attempt?.catch) attempt.catch(() => {});
+  }
+
+  function fadeTo(t, to, ms, done) {
+    t.fade = { from: t.level, to, start: performance.now(), ms, done };
+    ensureTimer();
+  }
+
+  function tick() {
+    const now = performance.now();
+    let busy = false;
+    Object.values(tracks).forEach((t) => {
+      if (t.fade) {
+        const k = Math.min(1, (now - t.fade.start) / t.fade.ms);
+        t.level = t.fade.from + (t.fade.to - t.fade.from) * k;
+        if (k >= 1) {
+          const done = t.fade.done;
+          t.fade = null;
+          if (done) done();
+        }
       }
-    }, 40);
+      if (!t.playing) return;
+      busy = true;
+      const el = t.els[t.active];
+      const L = t.cfg.loop;
+      if (!t.xfade && !el.paused && el.currentTime >= L - MUSIC_HANDOFF_S) {
+        const next = t.els[1 - t.active];
+        next.currentTime = Math.max(0, el.currentTime - L);
+        next.volume = 0;
+        safePlay(next);
+        t.xfade = { old: t.active, start: now };
+        t.active = 1 - t.active;
+      }
+      const level = Math.max(0, Math.min(1, t.level));
+      if (t.xfade) {
+        const k = Math.min(1, (now - t.xfade.start) / MUSIC_XFADE_MS);
+        t.els[t.active].volume = level * k;
+        const old = t.els[t.xfade.old];
+        old.volume = level * (1 - k);
+        if (k >= 1) {
+          old.pause();
+          old.currentTime = 0;
+          t.xfade = null;
+        }
+      } else {
+        t.els[t.active].volume = level;
+      }
+    });
+    if (!busy && !Object.values(tracks).some((t) => t.fade)) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  function ensureTimer() {
+    if (!timer) timer = setInterval(tick, 40);
+  }
+
+  function halt(t) {
+    t.playing = false;
+    t.xfade = null;
+    t.els.forEach((audio) => {
+      audio.pause();
+      audio.volume = 0;
+    });
   }
 
   function start(name) {
-    const audio = player(name);
-    const attempt = audio.play();
-    if (attempt?.catch) attempt.catch(() => {});
-    fade(name, target(), MUSIC_FADE_MS);
+    const t = track(name);
+    if (!t.playing) {
+      t.playing = true;
+      safePlay(t.els[t.active]);
+    }
+    fadeTo(t, target(), MUSIC_FADE_MS);
   }
 
   function play(name) {
     wanted = name;
-    if (!settings.music || !unlocked || document.hidden || !name) return;
+    if (!settings.music || !unlocked || document.hidden || !name || !MUSIC_TRACKS[name]) return;
     if (current && current !== name) {
-      const old = current;
-      fade(old, 0, MUSIC_FADE_MS, () => players[old]?.pause());
+      const old = tracks[current];
+      if (old) fadeTo(old, 0, MUSIC_FADE_MS, () => halt(old));
     }
     current = name;
     start(name);
   }
 
   function stop(keepWanted = true) {
-    Object.keys(players).forEach((name) => fade(name, 0, 400, () => players[name]?.pause()));
+    Object.values(tracks).forEach((t) => fadeTo(t, 0, 400, () => halt(t)));
     current = null;
     if (!keepWanted) wanted = null;
   }
@@ -459,25 +533,44 @@ const Music = (() => {
     },
     duck(on) {
       ducked = on;
-      if (current) fade(current, target(), 500);
+      if (current && tracks[current]) fadeTo(tracks[current], target(), 500);
     },
     refresh() {
       if (!settings.music) {
         stop();
         return;
       }
-      if (current) fade(current, target(), 300);
+      if (current && tracks[current]) fadeTo(tracks[current], target(), 300);
       else play(wanted);
     },
     suspend() {
-      Object.values(players).forEach((audio) => audio.pause());
+      Object.values(tracks).forEach((t) => {
+        t.fade = null;
+        t.level = 0;
+        halt(t);
+      });
       current = null;
     },
     resume() {
       play(wanted);
     },
+    // Test hook: jump the active element to `secondsBeforeLoop` before the loop point.
+    _seekNearLoop(secondsBeforeLoop = 2) {
+      const t = current && tracks[current];
+      if (!t) return false;
+      t.els[t.active].currentTime = t.cfg.loop - secondsBeforeLoop;
+      return true;
+    },
     get state() {
-      return { current, wanted, unlocked, ducked, volumes: Object.fromEntries(Object.entries(players).map(([k, a]) => [k, { volume: a.volume, paused: a.paused }])) };
+      return {
+        current, wanted, unlocked, ducked,
+        volumes: Object.fromEntries(Object.entries(tracks).map(([k, t]) => [k, {
+          level: t.level, active: t.active, playing: t.playing,
+          volume: t.els[t.active].volume, paused: t.els[t.active].paused,
+          time: t.els[t.active].currentTime,
+          els: t.els.map((a) => ({ volume: a.volume, paused: a.paused, time: a.currentTime })),
+        }])),
+      };
     },
   };
 })();

@@ -2,7 +2,7 @@
 
 A mobile-first geography progression game (PWA, also wrapped for Android as a TWA in `GeoSparkTWA/`).
 
-Current game version: `0.6.3`
+Current game version: `0.6.4`
 
 ## Versioning
 
@@ -52,7 +52,7 @@ Tracks are Tom's and live in `assets/music/`:
 - `menu.mp3` — menus, Learning, Stamp Book, results, Zen
 - `gameplay.mp3` — Journey and Challenge
 
-They loop, crossfade between scenes, dip during pauses and flights, and stop when the app is in the background. Missing files are silently ignored. Music streams from the network (not precached).
+They loop gaplessly (two-player handoff; see `assets/music/README.md` for the loop-file format), crossfade between scenes, dip during pauses and flights, and stop when the app is in the background. Missing files are silently ignored. Music streams from the network (not precached).
 
 ## Progression
 
