@@ -2,7 +2,7 @@
 
 A mobile-first geography progression game (PWA, also wrapped for Android as a TWA in `GeoSparkTWA/`).
 
-Current game version: `0.6.2`
+Current game version: `0.6.3`
 
 ## Versioning
 
@@ -43,6 +43,16 @@ Finishing a stage plays a flight: Tom's plane (`assets/travel/plane.webp`) flies
 To preview a flight without finishing a stage, open the game with `?flight=N` (N = 2–6), e.g. `index.html?flight=3`, then tap Continue on the splash screen.
 
 All artwork is Tom's (no SVG illustrations). Code only animates it.
+
+## Music and settings
+
+Settings (⚙ on the menu) holds Music on/off, music volume, Sound effects and Vibration; a ♪ quick toggle sits on the menu header and Music/Sounds chips on the pause screen. Settings are stored under `geospark3.settings`, separate from the passport.
+
+Tracks are Tom's and live in `assets/music/`:
+- `menu.mp3` — menus, Learning, Stamp Book, results, Zen
+- `gameplay.mp3` — Journey and Challenge
+
+They loop, crossfade between scenes, dip during pauses and flights, and stop when the app is in the background. Missing files are silently ignored. Music streams from the network (not precached).
 
 ## Progression
 

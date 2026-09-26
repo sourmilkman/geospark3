@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.6.2";
+const APP_VERSION = "0.6.3";
 const PASSPORT_VERSION = 2;
 
 // Pacing is shared by every character so characters can be switched without losing progress.
@@ -353,6 +353,176 @@ function savePassport() {
   } catch (_) {}
 }
 
+// ─────────────────────────────────────────────
+// Settings (kept separate from the passport so a reset keeps them)
+// ─────────────────────────────────────────────
+const SETTINGS_KEY = "geospark3.settings";
+const DEFAULT_SETTINGS = { music: true, musicVolume: 40, sfx: true, haptics: true };
+let settings = loadSettings();
+
+function loadSettings() {
+  try {
+    return { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}) };
+  } catch (_) {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────
+// Music: one looping track for menus, one for gameplay, crossfaded.
+// Files are Tom's; if a file is missing the game simply stays silent.
+// ─────────────────────────────────────────────
+const MUSIC_TRACKS = {
+  menu: "assets/music/menu.mp3",
+  game: "assets/music/gameplay.mp3",
+};
+const MUSIC_FADE_MS = 900;
+const MUSIC_DUCK = 0.3;
+
+const Music = (() => {
+  const players = {};
+  const fades = {};
+  let current = null;
+  let wanted = null;
+  let unlocked = false;
+  let ducked = false;
+
+  function target() {
+    return (settings.musicVolume / 100) * (ducked ? MUSIC_DUCK : 1);
+  }
+
+  function player(name) {
+    if (!players[name]) {
+      const audio = new Audio();
+      audio.src = MUSIC_TRACKS[name];
+      audio.loop = true;
+      audio.preload = "none";
+      audio.volume = 0;
+      players[name] = audio;
+    }
+    return players[name];
+  }
+
+  function fade(name, to, ms, done) {
+    const audio = players[name];
+    if (!audio) return;
+    clearInterval(fades[name]);
+    const from = audio.volume;
+    const started = performance.now();
+    fades[name] = setInterval(() => {
+      const t = Math.min(1, (performance.now() - started) / ms);
+      audio.volume = Math.max(0, Math.min(1, from + (to - from) * t));
+      if (t >= 1) {
+        clearInterval(fades[name]);
+        if (done) done();
+      }
+    }, 40);
+  }
+
+  function start(name) {
+    const audio = player(name);
+    const attempt = audio.play();
+    if (attempt?.catch) attempt.catch(() => {});
+    fade(name, target(), MUSIC_FADE_MS);
+  }
+
+  function play(name) {
+    wanted = name;
+    if (!settings.music || !unlocked || document.hidden || !name) return;
+    if (current && current !== name) {
+      const old = current;
+      fade(old, 0, MUSIC_FADE_MS, () => players[old]?.pause());
+    }
+    current = name;
+    start(name);
+  }
+
+  function stop(keepWanted = true) {
+    Object.keys(players).forEach((name) => fade(name, 0, 400, () => players[name]?.pause()));
+    current = null;
+    if (!keepWanted) wanted = null;
+  }
+
+  return {
+    play,
+    stop,
+    unlock() {
+      if (unlocked) return;
+      unlocked = true;
+      play(wanted);
+    },
+    duck(on) {
+      ducked = on;
+      if (current) fade(current, target(), 500);
+    },
+    refresh() {
+      if (!settings.music) {
+        stop();
+        return;
+      }
+      if (current) fade(current, target(), 300);
+      else play(wanted);
+    },
+    suspend() {
+      Object.values(players).forEach((audio) => audio.pause());
+      current = null;
+    },
+    resume() {
+      play(wanted);
+    },
+    get state() {
+      return { current, wanted, unlocked, ducked, volumes: Object.fromEntries(Object.entries(players).map(([k, a]) => [k, { volume: a.volume, paused: a.paused }])) };
+    },
+  };
+})();
+
+function sceneForScreen(id) {
+  if (id === "boot-screen") return null;
+  if (id === "game-screen" || id === "launch-screen") return state.mode === "zen" ? "menu" : "game";
+  return "menu";
+}
+
+function renderSettingsUi() {
+  const on = (key) => Boolean(settings[key]);
+  document.querySelectorAll(".switch[data-setting]").forEach((button) => {
+    button.setAttribute("aria-checked", on(button.dataset.setting) ? "true" : "false");
+  });
+  document.querySelectorAll(".toggle-chip[data-setting]").forEach((button) => {
+    const key = button.dataset.setting;
+    button.classList.toggle("off", !on(key));
+    button.textContent = `${key === "music" ? "Music" : "Sounds"} ${on(key) ? "on" : "off"}`;
+  });
+  const musicButton = $("menu-music-btn");
+  musicButton.classList.toggle("off", !settings.music);
+  musicButton.setAttribute("aria-pressed", settings.music ? "true" : "false");
+  musicButton.setAttribute("aria-label", settings.music ? "Music on" : "Music off");
+  $("setting-music-volume").value = settings.musicVolume;
+  $("music-volume-label").textContent = `${settings.musicVolume}%`;
+  $("setting-music-volume").disabled = !settings.music;
+}
+
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  saveSettings();
+  if (key === "music") Music.refresh();
+  renderSettingsUi();
+  Sound.tap();
+  if (key === "haptics" && settings.haptics) haptic("spark");
+}
+
+function openSettings() {
+  Sound.tap();
+  renderSettingsUi();
+  $("settings-version").textContent = `GeoSpark v${APP_VERSION}`;
+  setScreen("settings-screen");
+}
+
 function todayKey(offsetDays = 0) {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
@@ -472,10 +642,11 @@ function mapQuestionsUnlocked() {
 // Screens
 // ─────────────────────────────────────────────
 function setScreen(id) {
-  ["boot-screen", "onboarding-screen", "menu-screen", "launch-screen", "learn-screen", "stamps-screen", "game-screen", "result-screen"].forEach((screenId) => {
+  ["boot-screen", "onboarding-screen", "menu-screen", "launch-screen", "learn-screen", "stamps-screen", "settings-screen", "game-screen", "result-screen"].forEach((screenId) => {
     $(screenId).classList.toggle("hidden", screenId !== id);
   });
   state.view = id;
+  Music.play(sceneForScreen(id));
   if (id === "menu-screen") startGlobe();
   else stopGlobe();
 }
@@ -508,7 +679,7 @@ function readySplash(targetScreen, status = "Ready to explore") {
 // Feedback: sound, haptics, toasts
 // ─────────────────────────────────────────────
 function haptic(kind) {
-  if (!navigator.vibrate) return;
+  if (!navigator.vibrate || !settings.haptics) return;
   if (kind === "spark") navigator.vibrate(28);
   if (kind === "wrong") navigator.vibrate([35, 45, 35]);
   if (kind === "badge") navigator.vibrate([20, 30, 60]);
@@ -525,7 +696,7 @@ function unlockAudio() {
 }
 
 function playTone(frequency, duration, type = "sine", gain = 0.08, delay = 0) {
-  if (!audioReady || !audioCtx) return;
+  if (!audioReady || !audioCtx || !settings.sfx) return;
   if (audioCtx.state === "suspended") audioCtx.resume();
   const start = audioCtx.currentTime + delay;
   const oscillator = audioCtx.createOscillator();
@@ -541,7 +712,7 @@ function playTone(frequency, duration, type = "sine", gain = 0.08, delay = 0) {
 }
 
 function playNoise(duration, gain = 0.05, filterFreq = 900, delay = 0) {
-  if (!audioReady || !audioCtx) return;
+  if (!audioReady || !audioCtx || !settings.sfx) return;
   const start = audioCtx.currentTime + delay;
   const length = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
   const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
@@ -599,7 +770,7 @@ const Sound = {
   },
   // Propeller drone that swells on take-off and fades on landing.
   flight(seconds) {
-    if (!audioReady || !audioCtx) return;
+    if (!audioReady || !audioCtx || !settings.sfx) return;
     if (audioCtx.state === "suspended") audioCtx.resume();
     const start = audioCtx.currentTime;
     const end = start + seconds;
@@ -944,6 +1115,7 @@ function startMode(mode) {
   clearTimeout(state.launchTimer);
   stopTimer();
   Sound.tap();
+  if (!state.running) state.mode = mode;
   const resuming = mode === "journey" && Boolean(passport.activeRun);
   const title = mode === "journey"
     ? (resuming ? "Resume Journey" : passport.journey.stage > 1 || passport.journey.level > 0 ? "Continue the Journey" : "Journey")
@@ -1560,6 +1732,7 @@ function showStageUnlock(stage, options = {}) {
   $("passport-stamp").src = STAGE_STAMPS[stage.id] || STAGE_STAMPS[1];
   $("stage-unlock-continue-btn").textContent = state.flightPreview ? "Back to menu" : "Continue Journey";
   $("stage-unlock-overlay").classList.remove("hidden");
+  Music.duck(true);
   playFlight(fromStage.id, stage.id);
 }
 
@@ -1568,6 +1741,7 @@ function continueStageUnlock() {
   Sound.tap();
   stopFlight();
   $("stage-unlock-overlay").classList.add("hidden");
+  Music.duck(false);
   state.stageUnlock = null;
   if (state.flightPreview) {
     state.flightPreview = false;
@@ -1877,6 +2051,8 @@ function pauseGame(silent = false) {
     : "The timer is frozen.";
   $("game-screen").classList.add("paused");
   $("pause-overlay").classList.remove("hidden");
+  renderSettingsUi();
+  Music.duck(true);
   saveActiveRun();
 }
 
@@ -1886,6 +2062,7 @@ function resumeGame() {
   state.paused = false;
   $("game-screen").classList.remove("paused");
   $("pause-overlay").classList.add("hidden");
+  Music.duck(false);
   if (!state.answered) startTimer();
 }
 
@@ -1977,6 +2154,7 @@ function exitRunToMenu() {
   state.running = false;
   state.paused = false;
   state.lastChanceActive = false;
+  Music.duck(false);
   const gameScreen = $("game-screen");
   gameScreen.classList.remove("paused", "last-chance");
   $("pause-overlay").classList.add("hidden");
@@ -2309,10 +2487,29 @@ function wireEvents() {
   onPress($("ability-btn"), useAbility);
   onPress($("auto-correct-btn"), autoCorrect);
   onPress($("skip-level-btn"), skipLevel);
-  document.addEventListener("pointerdown", unlockAudio, { once: true });
+  onPress($("settings-btn"), openSettings);
+  onPress($("settings-back-btn"), backToMenu);
+  onPress($("menu-music-btn"), () => toggleSetting("music"));
+  document.querySelectorAll(".switch[data-setting], .toggle-chip[data-setting]").forEach((button) => {
+    onPress(button, () => toggleSetting(button.dataset.setting));
+  });
+  $("setting-music-volume").addEventListener("input", (event) => {
+    settings.musicVolume = Number(event.target.value);
+    saveSettings();
+    renderSettingsUi();
+    Music.refresh();
+  });
+  document.addEventListener("pointerdown", () => {
+    unlockAudio();
+    Music.unlock();
+  }, { once: true });
   window.addEventListener("pagehide", saveActiveRun);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) return;
+    if (!document.hidden) {
+      Music.resume();
+      return;
+    }
+    Music.suspend();
     // Leaving the app pauses the run (and saves Journey progress); the pause screen waits on return.
     if (state.running && state.mode !== "zen" && !state.paused) pauseGame(true);
     saveActiveRun();
@@ -2321,6 +2518,7 @@ function wireEvents() {
 
 async function init() {
   wireEvents();
+  renderSettingsUi();
   selectArchetype(passport.archetype);
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -2344,4 +2542,4 @@ init().catch(() => {
 });
 
 // Test hook (used by automated checks; harmless in production).
-window.__geospark = { state, get passport() { return passport; }, ARCHETYPES, BADGES, checkBadges, APP_VERSION };
+window.__geospark = { state, get passport() { return passport; }, get settings() { return settings; }, Music, ARCHETYPES, BADGES, checkBadges, APP_VERSION };

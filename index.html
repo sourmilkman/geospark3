@@ -58,7 +58,10 @@
             <span id="menu-character-name">The Historian</span><small>Switch</small>
           </button>
         </div>
-        <img class="mini-mark" src="icon-192.png" alt="">
+        <div class="header-actions">
+          <button class="round-btn music-toggle" id="menu-music-btn" type="button" aria-pressed="true" aria-label="Music on">♪</button>
+          <button class="round-btn" id="settings-btn" type="button" aria-label="Settings">⚙</button>
+        </div>
       </header>
 
       <div class="menu-hero">
@@ -95,7 +98,7 @@
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
       <div class="menu-footer">
-        <div class="version-label" id="menu-version">GeoSpark v0.6.2</div>
+        <div class="version-label" id="menu-version">GeoSpark v0.6.3</div>
         <button class="text-btn" id="new-game-btn" type="button">Reset passport</button>
       </div>
 
@@ -131,6 +134,37 @@
       </header>
       <div class="learn-tabs" id="learn-tabs"></div>
       <div class="learn-list" id="learn-list"></div>
+    </section>
+
+    <section class="screen settings-screen hidden" id="settings-screen" aria-labelledby="settings-title">
+      <header class="game-hud">
+        <button class="icon-btn" id="settings-back-btn" type="button" aria-label="Back to menu">Back</button>
+        <div class="hud-center">
+          <div class="hud-mode" id="settings-title">Settings</div>
+        </div>
+        <div class="learn-count"></div>
+      </header>
+      <div class="settings-list">
+        <div class="section-label">Sound</div>
+        <div class="setting-row">
+          <div><b>Music</b><small>Menu and gameplay soundtrack</small></div>
+          <button class="switch" id="setting-music" type="button" role="switch" data-setting="music" aria-checked="true"><span></span></button>
+        </div>
+        <div class="setting-row setting-slider">
+          <div><b>Music volume</b><small id="music-volume-label">40%</small></div>
+          <input type="range" id="setting-music-volume" min="0" max="100" step="5" value="40" aria-label="Music volume">
+        </div>
+        <div class="setting-row">
+          <div><b>Sound effects</b><small>Taps, answers, stamps, flights</small></div>
+          <button class="switch" id="setting-sfx" type="button" role="switch" data-setting="sfx" aria-checked="true"><span></span></button>
+        </div>
+        <div class="section-label">Feel</div>
+        <div class="setting-row">
+          <div><b>Vibration</b><small>Haptic feedback on answers</small></div>
+          <button class="switch" id="setting-haptics" type="button" role="switch" data-setting="haptics" aria-checked="true"><span></span></button>
+        </div>
+      </div>
+      <div class="version-label" id="settings-version">GeoSpark v0.6.3</div>
     </section>
 
     <section class="screen stamps-screen hidden" id="stamps-screen" aria-labelledby="stamps-title">
@@ -203,6 +237,10 @@
           <h2>Paused</h2>
           <p id="pause-copy">The timer is frozen.</p>
           <button class="primary-btn" id="resume-btn" type="button">Resume</button>
+          <div class="pause-toggles">
+            <button class="toggle-chip" id="pause-music-btn" type="button" data-setting="music">Music</button>
+            <button class="toggle-chip" id="pause-sfx-btn" type="button" data-setting="sfx">Sounds</button>
+          </div>
           <button class="text-btn" id="pause-exit-btn" type="button">Save &amp; exit to menu</button>
         </div>
       </div>
@@ -228,7 +266,7 @@
         <button class="secondary-btn hidden" id="result-review-btn" type="button">Review these in Learning</button>
         <button class="secondary-btn" id="result-menu-btn" type="button">Return to Menu</button>
       </div>
-      <div class="version-label" id="result-version">GeoSpark v0.6.2</div>
+      <div class="version-label" id="result-version">GeoSpark v0.6.3</div>
     </section>
 
       <div class="flight-overlay hidden" id="stage-unlock-overlay" role="dialog" aria-modal="true" aria-labelledby="stage-unlock-title">

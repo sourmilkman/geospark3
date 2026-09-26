@@ -1,4 +1,4 @@
-const CACHE_NAME = 'geospark3-v0.6.2';
+const CACHE_NAME = 'geospark3-v0.6.3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -58,6 +58,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  // Let the browser stream music itself: media uses range requests, and caching partial responses breaks playback.
+  if (event.request.headers.has('range') || event.request.url.includes('/assets/music/')) return;
 
   event.respondWith(
     caches.match(event.request, { ignoreSearch: true }).then(cached => {
