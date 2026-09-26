@@ -10,6 +10,10 @@ Mobile-first geography quiz PWA (vanilla JS, no build step). Served from GitHub 
 - `sw.js` — cache-first service worker; precaches shell, data and `assets/flags/*.webp`.
 - `data/*.json` — `{name, cc, capital, city, continent}`; `cc` is the unique key (US states are `us-xx`).
 
+## Art direction
+- Owner is an artist/graphic designer: never ship code-drawn SVG illustrations. Visual assets come from Tom's generated art; code animates them.
+- Stamps: `assets/stamps/`; plane: `assets/travel/`; characters: `assets/menu/` (transparent PNG cut-outs).
+
 ## Conventions
 - Bump version in 3 places (see README). Never change manifest `id`.
 - Owner works on Windows PC and Android; the main HTML must stay `index.html`.

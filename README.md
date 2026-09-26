@@ -2,7 +2,7 @@
 
 A mobile-first geography progression game (PWA, also wrapped for Android as a TWA in `GeoSparkTWA/`).
 
-Current game version: `0.6.1`
+Current game version: `0.6.2`
 
 ## Versioning
 
@@ -35,6 +35,14 @@ Chosen at passport creation and switchable any time from the menu (progress is s
 ## Failure rules
 
 Running out of hearts triggers **Last Chance** once per run (answer correctly to revive with 1 heart). If that fails, only the current level's question progress resets — no level or currency loss. Every completed level returns 1 heart.
+
+## Flights between regions
+
+Finishing a stage plays a flight: Tom's plane (`assets/travel/plane.webp`) flies the great-circle route on the globe, then the destination's passport stamp (`assets/stamps/*.webp`) lands on a passport page. Tap to skip. The same stamps appear on the menu Journey Map and as the six region-mastery seals in the Stamp Book.
+
+To preview a flight without finishing a stage, open the game with `?flight=N` (N = 2–6), e.g. `index.html?flight=3`, then tap Continue on the splash screen.
+
+All artwork is Tom's (no SVG illustrations). Code only animates it.
 
 ## Progression
 

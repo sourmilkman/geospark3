@@ -1877,3 +1877,298 @@ h1 {
   -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
   mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
 }
+
+/* ───────────── v0.6.2: flight between regions ───────────── */
+.flight-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: max(22px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(82, 183, 255, 0.2), transparent 55%),
+    linear-gradient(180deg, #071427, #030a16);
+  text-align: center;
+}
+
+.flight-head h2 {
+  margin: 4px 0 0;
+  font-size: 30px;
+}
+
+.flight-route {
+  margin-top: 4px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+}
+
+.flight-stage {
+  position: relative;
+  width: min(88vw, 360px);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  transition: transform 520ms cubic-bezier(.2, .8, .2, 1), opacity 420ms ease;
+}
+
+#flight-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.flight-plane {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 14px 10px rgba(0, 0, 0, 0.45));
+  will-change: transform;
+}
+
+/* Cream passport page the stamp lands on (keeps dark inks legible). */
+.passport-page {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 70px);
+  width: min(calc(100% - 40px), 360px);
+  display: grid;
+  grid-template-columns: 44% 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(0deg, rgba(120, 96, 60, 0.05) 0 1px, transparent 1px 26px),
+    radial-gradient(circle at 20% 20%, #fbf5e6, #efe3c8 70%, #e6d6b4);
+  color: #3a2c19;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(120, 96, 60, 0.25);
+  transform: translate(-50%, 130%) rotate(2deg);
+  opacity: 0;
+  transition: transform 520ms cubic-bezier(.2, .9, .25, 1.1), opacity 300ms ease;
+}
+
+.passport-stamp {
+  width: 100%;
+  opacity: 0;
+  transform: scale(1.9) rotate(-18deg);
+  mix-blend-mode: multiply;
+}
+
+.passport-copy {
+  text-align: left;
+}
+
+.passport-copy p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.passport-copy .stage-bonus {
+  display: inline-block;
+  margin: 0;
+  border-radius: 999px;
+  background: #3a2c19;
+  color: #f6ecd5;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.flight-continue {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  width: min(calc(100% - 40px), 330px);
+  transform: translate(-50%, 20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.flight-skip {
+  position: absolute;
+  bottom: max(28px, env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  transition: opacity 200ms ease;
+}
+
+.flight-overlay.stamped .flight-stage {
+  transform: translateY(-14%) scale(0.72);
+  opacity: 0.55;
+}
+
+.flight-overlay.stamped .passport-page {
+  transform: translate(-50%, 0) rotate(-1.5deg);
+  opacity: 1;
+}
+
+.flight-overlay.stamped .passport-stamp {
+  animation: stampSlam 460ms cubic-bezier(.3, 1.4, .5, 1) 260ms forwards;
+}
+
+.flight-overlay.stamped .flight-skip {
+  opacity: 0;
+}
+
+.flight-overlay.landed .flight-continue {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+@keyframes stampSlam {
+  0% { opacity: 0; transform: scale(1.9) rotate(-18deg); }
+  55% { opacity: 1; transform: scale(0.92) rotate(-7deg); }
+  75% { transform: scale(1.03) rotate(-8deg); }
+  100% { opacity: 0.94; transform: scale(1) rotate(-8deg); }
+}
+
+/* Stamps on the menu Journey Map */
+.stage-pill {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  width: 176px;
+}
+
+.stage-pill .stage-stamp {
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: grayscale(1) brightness(1.6);
+  opacity: 0.16;
+}
+
+.stage-pill .stage-stamp.entered {
+  filter: none;
+  opacity: 1;
+  background: radial-gradient(circle, #f3e8cf 60%, transparent 62%);
+  border-radius: 999px;
+}
+
+.stage-pill.locked strong {
+  color: var(--muted);
+}
+
+/* Stamp art in the Stamp Book, toasts and run summary */
+.stamp-seal.has-art {
+  border: 0;
+  background: radial-gradient(circle, #f3e8cf 64%, transparent 66%);
+  transform: rotate(-8deg);
+}
+
+.stamp-seal.has-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.stamp-card.tier-0 .stamp-seal.has-art {
+  background: radial-gradient(circle, rgba(243, 232, 207, 0.12) 64%, transparent 66%);
+}
+
+.stamp-card.tier-0 .stamp-seal.has-art img {
+  filter: grayscale(1) brightness(1.8);
+  opacity: 0.3;
+}
+
+.stamp-card.tier-1 .stamp-seal.has-art { box-shadow: 0 0 0 3px #d28b4a; border-radius: 999px; }
+.stamp-card.tier-2 .stamp-seal.has-art { box-shadow: 0 0 0 3px #cfd8e6; border-radius: 999px; }
+.stamp-card.tier-3 .stamp-seal.has-art { box-shadow: 0 0 0 3px var(--gold), 0 0 22px rgba(255, 202, 102, 0.35); border-radius: 999px; }
+
+.toast-icon img,
+.result-badge span img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 999px;
+  background: #f3e8cf;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flight-overlay.stamped .passport-stamp { animation: none; opacity: 0.94; transform: rotate(-8deg); }
+  .passport-page, .flight-stage, .flight-continue { transition: none; }
+}
+
+/* Flight layout: head, globe, passport page and button stack in flow (no dead gap, no overflow) */
+.flight-overlay {
+  justify-content: center;
+  gap: 14px;
+}
+
+.flight-stage {
+  width: min(84vw, 340px, 40dvh);
+}
+
+.flight-overlay.stamped .flight-stage {
+  transform: scale(0.94);
+  opacity: 0.7;
+}
+
+.passport-page {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: min(100%, 360px);
+  transform: translateY(26px) rotate(2deg);
+}
+
+.flight-overlay.stamped .passport-page {
+  transform: translateY(0) rotate(-1.5deg);
+}
+
+.passport-copy {
+  min-width: 0;
+}
+
+.passport-copy .stage-bonus {
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.flight-continue {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: min(100%, 330px);
+  transform: translateY(12px);
+}
+
+.flight-overlay.landed .flight-continue {
+  transform: translateY(0);
+}
+
+.stage-track {
+  flex-shrink: 0;
+}
+
+.stage-pill {
+  min-height: 64px;
+}
+
+.stamp-card.tier-0 .stamp-seal.has-art {
+  background: radial-gradient(circle, rgba(243, 232, 207, 0.3) 64%, transparent 66%);
+}
+
+.stamp-card.tier-0 .stamp-seal.has-art img {
+  filter: grayscale(1) contrast(0.8);
+  opacity: 0.45;
+}

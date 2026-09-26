@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.6.1";
+const APP_VERSION = "0.6.2";
 const PASSPORT_VERSION = 2;
 
 // Pacing is shared by every character so characters can be switched without losing progress.
@@ -140,14 +140,33 @@ const EUROPE_PIN_POSITIONS = {
 const MAP_COLORS = ["#7fd8d8", "#e4869b", "#b8e27f", "#c49be8", "#e5b07e", "#93bdea", "#80d99a", "#d783c8", "#d7d577"];
 const EUROPE_MAP_BOUNDS = { minLon: -25, maxLon: 45, minLat: 34, maxLat: 72, width: 100, height: 72 };
 
+// Passport stamp artwork per journey stage (Tom's illustrations).
+const STAGE_STAMPS = {
+  1: "assets/stamps/europe.webp",
+  2: "assets/stamps/south-america.webp",
+  3: "assets/stamps/asia.webp",
+  4: "assets/stamps/us-states.webp",
+  5: "assets/stamps/africa.webp",
+  6: "assets/stamps/global-master.webp",
+};
+// Where the plane flies from/to for each stage: [longitude, latitude].
+const STAGE_CENTRES = {
+  1: [10, 50],
+  2: [-60, -15],
+  3: [95, 32],
+  4: [-98, 39],
+  5: [20, 4],
+  6: [134, -25],
+};
+
 // Region groups used by the mastery stamps.
 const REGION_GROUPS = [
-  { id: "euro-expert", name: "Euro Expert", icon: "🏰", continents: ["Europe"] },
-  { id: "andes-ace", name: "Andes Ace", icon: "🦙", continents: ["South America"] },
-  { id: "silk-road", name: "Silk Road Scholar", icon: "🏯", continents: ["Asia"] },
-  { id: "stars-stripes", name: "Stars & Stripes", icon: "🦅", continents: ["US States"] },
-  { id: "safari-sage", name: "Safari Sage", icon: "🦁", continents: ["Africa"] },
-  { id: "island-hopper", name: "Island Hopper", icon: "🏝️", continents: ["North America", "Oceania"] },
+  { id: "euro-expert", name: "Euro Expert", icon: "🏰", art: STAGE_STAMPS[1], continents: ["Europe"] },
+  { id: "andes-ace", name: "Andes Ace", icon: "🦙", art: STAGE_STAMPS[2], continents: ["South America"] },
+  { id: "silk-road", name: "Silk Road Scholar", icon: "🏯", art: STAGE_STAMPS[3], continents: ["Asia"] },
+  { id: "stars-stripes", name: "Stars & Stripes", icon: "🦅", art: STAGE_STAMPS[4], continents: ["US States"] },
+  { id: "safari-sage", name: "Safari Sage", icon: "🦁", art: STAGE_STAMPS[5], continents: ["Africa"] },
+  { id: "island-hopper", name: "Island Hopper", icon: "🏝️", art: STAGE_STAMPS[6], continents: ["North America", "Oceania"] },
 ];
 
 const BADGES = [
@@ -157,6 +176,7 @@ const BADGES = [
     id: group.id,
     name: group.name,
     icon: group.icon,
+    art: group.art,
     category: "Mastery",
     desc: `${group.continents.join(" & ")} places answered correctly 3 times`,
     tiersFn: () => {
@@ -235,6 +255,9 @@ const state = {
   droppedToOne: false,
   run: null,
   pendingTimer: 0,
+  flightRaf: 0,
+  flightLanded: false,
+  flightPreview: false,
 };
 
 // All delayed game steps go through here so leaving a run can cancel them.
@@ -517,6 +540,28 @@ function playTone(frequency, duration, type = "sine", gain = 0.08, delay = 0) {
   oscillator.stop(start + duration);
 }
 
+function playNoise(duration, gain = 0.05, filterFreq = 900, delay = 0) {
+  if (!audioReady || !audioCtx) return;
+  const start = audioCtx.currentTime + delay;
+  const length = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+  const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < length; index += 1) data[index] = Math.random() * 2 - 1;
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(filterFreq, start);
+  const volume = audioCtx.createGain();
+  volume.gain.setValueAtTime(gain, start);
+  volume.gain.exponentialRampToValueAtTime(0.001, start + duration);
+  source.connect(filter);
+  filter.connect(volume);
+  volume.connect(audioCtx.destination);
+  source.start(start);
+  source.stop(start + duration + 0.02);
+}
+
 const Sound = {
   tap() {
     playTone(620, 0.08, "sine", 0.07);
@@ -551,6 +596,37 @@ const Sound = {
   },
   badge() {
     [784, 988, 1175, 1568].forEach((freq, index) => playTone(freq, 0.18, "sine", 0.06, index * 0.06));
+  },
+  // Propeller drone that swells on take-off and fades on landing.
+  flight(seconds) {
+    if (!audioReady || !audioCtx) return;
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const start = audioCtx.currentTime;
+    const end = start + seconds;
+    const engine = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const volume = audioCtx.createGain();
+    engine.type = "sawtooth";
+    engine.frequency.setValueAtTime(62, start);
+    engine.frequency.linearRampToValueAtTime(96, start + seconds * 0.35);
+    engine.frequency.linearRampToValueAtTime(70, end);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(420, start);
+    volume.gain.setValueAtTime(0.0001, start);
+    volume.gain.exponentialRampToValueAtTime(0.05, start + 0.5);
+    volume.gain.setValueAtTime(0.05, end - 0.7);
+    volume.gain.exponentialRampToValueAtTime(0.0001, end);
+    engine.connect(filter);
+    filter.connect(volume);
+    volume.connect(audioCtx.destination);
+    engine.start(start);
+    engine.stop(end + 0.05);
+    playNoise(seconds * 0.9, 0.018, 700, 0.2);
+  },
+  stamp() {
+    playTone(96, 0.22, "sine", 0.16);
+    playTone(64, 0.3, "sine", 0.1, 0.02);
+    playNoise(0.12, 0.09, 1800);
   },
   lastChance() {
     playTone(330, 0.2, "sawtooth", 0.04);
@@ -620,8 +696,9 @@ function renderMenu() {
   $("stage-track").innerHTML = STAGES.map((stage) => {
     const isComplete = passport.journey.stamps.includes(stage.name);
     const isCurrent = passport.journey.stage === stage.id;
-    const status = isComplete ? "complete" : isCurrent ? "current" : "";
-    return `<div class="stage-pill ${status}"><strong>${stage.id}. ${stage.name}</strong><small>${isComplete ? "Stamped" : isCurrent ? "In progress" : "Locked ahead"}</small></div>`;
+    const entered = stage.id <= passport.journey.stage;
+    const status = isComplete ? "complete" : isCurrent ? "current" : "locked";
+    return `<div class="stage-pill ${status}"><img class="stage-stamp ${entered ? "entered" : ""}" src="${STAGE_STAMPS[stage.id]}" alt=""><strong>${stage.id}. ${stage.name}</strong><small>${isComplete ? "Completed" : isCurrent ? "In progress" : "Locked ahead"}</small></div>`;
   }).join("");
 }
 
@@ -817,7 +894,7 @@ function renderStampBook() {
     const pips = tiers.map((_, index) => `<i class="pip ${index < tier ? `on t${index + 1}` : ""}"></i>`).join("");
     return `${header}
       <article class="stamp-card tier-${tier}">
-        <div class="stamp-seal"><span>${badge.icon}</span></div>
+        <div class="stamp-seal ${badge.art ? "has-art" : ""}">${badge.art ? `<img src="${badge.art}" alt="">` : `<span>${badge.icon}</span>`}</div>
         <div class="stamp-body">
           <b>${escapeHtml(badge.name)}</b>
           <small>${escapeHtml(badge.desc)}</small>
@@ -850,7 +927,7 @@ function checkBadges() {
     setTimeout(() => {
       Sound.badge();
       haptic("badge");
-      showToast(`<span class="toast-icon">${badge.icon}</span><span><b>${escapeHtml(badge.name)}</b> ${TIER_NAMES[tier - 1]} stamp · +${reward} AM</span>`, `badge tier-${tier}`);
+      showToast(`<span class="toast-icon">${badge.art ? `<img src="${badge.art}" alt="">` : badge.icon}</span><span><b>${escapeHtml(badge.name)}</b> ${TIER_NAMES[tier - 1]} stamp · +${reward} AM</span>`, `badge tier-${tier}`);
     }, 350 + index * 700);
   });
   return unlocked.length;
@@ -1461,37 +1538,159 @@ function completeStage() {
   return null;
 }
 
-function showStageUnlock(stage) {
+function showStageUnlock(stage, options = {}) {
   const details = STAGE_UNLOCK_DETAILS[stage.id] || {
     region: stage.name,
     copy: `${stage.name} has joined your journey.`,
-    mapLabel: stage.name,
-    mapClass: "global",
   };
+  const fromStage = STAGES.find((item) => item.id === stage.id - 1) || STAGES[0];
   state.stageUnlock = stage.id;
+  state.flightPreview = Boolean(options.preview);
   state.paused = true;
-  $("stage-unlock-title").textContent = `${details.region} Unlocked`;
+  stopTimer();
+  $("flight-eyebrow").textContent = "Next destination";
+  $("stage-unlock-title").textContent = details.region;
+  $("flight-route").textContent = `${fromStage.name} → ${details.region}`;
   $("stage-unlock-copy").textContent = details.copy;
-  $("stage-unlock-label").textContent = details.mapLabel;
   $("stage-unlock-bonus").textContent = stage.id === 4
     ? "New drills added"
     : stage.id === 6
       ? "Final region pool opened"
       : `New region added · +${AIRMILES_STAGE_REWARD} AM`;
-  $("stage-unlock-map").className = `stage-map ${details.mapClass}`;
+  $("passport-stamp").src = STAGE_STAMPS[stage.id] || STAGE_STAMPS[1];
+  $("stage-unlock-continue-btn").textContent = state.flightPreview ? "Back to menu" : "Continue Journey";
   $("stage-unlock-overlay").classList.remove("hidden");
+  playFlight(fromStage.id, stage.id);
 }
 
 function continueStageUnlock() {
+  if (!state.flightLanded) return;
   Sound.tap();
+  stopFlight();
   $("stage-unlock-overlay").classList.add("hidden");
   state.stageUnlock = null;
+  if (state.flightPreview) {
+    state.flightPreview = false;
+    state.paused = false;
+    return;
+  }
   state.paused = false;
   state.recent = [];
   updateHud();
   savePassport();
   saveActiveRun();
   nextQuestion();
+}
+
+// ─────────────────────────────────────────────
+// Flight between regions: Tom's plane follows the great-circle route on the globe,
+// then the destination stamp lands on a passport page.
+// ─────────────────────────────────────────────
+const FLIGHT_PRE_MS = 700;
+const FLIGHT_AIR_MS = 2800;
+const FLIGHT_LAND_MS = 500;
+const FLIGHT_STAMP_AT = FLIGHT_PRE_MS + FLIGHT_AIR_MS + FLIGHT_LAND_MS;
+
+function lonLatToVec([lon, lat]) {
+  const l = lon * Math.PI / 180;
+  const p = lat * Math.PI / 180;
+  return [Math.cos(p) * Math.cos(l), Math.cos(p) * Math.sin(l), Math.sin(p)];
+}
+
+function vecToLonLat([x, y, z]) {
+  return [Math.atan2(y, x) * 180 / Math.PI, Math.asin(Math.max(-1, Math.min(1, z))) * 180 / Math.PI];
+}
+
+function slerpLonLat(a, b, t) {
+  const va = lonLatToVec(a);
+  const vb = lonLatToVec(b);
+  const dot = Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2]));
+  const omega = Math.acos(dot);
+  if (omega < 1e-6) return a;
+  const sa = Math.sin((1 - t) * omega) / Math.sin(omega);
+  const sb = Math.sin(t * omega) / Math.sin(omega);
+  return vecToLonLat([va[0] * sa + vb[0] * sb, va[1] * sa + vb[1] * sb, va[2] * sa + vb[2] * sb]);
+}
+
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const clamp01 = (t) => Math.max(0, Math.min(1, t));
+
+function stopFlight() {
+  cancelAnimationFrame(state.flightRaf);
+  state.flightRaf = 0;
+}
+
+function playFlight(fromId, toId) {
+  stopFlight();
+  const overlay = $("stage-unlock-overlay");
+  const canvas = $("flight-canvas");
+  const ctx = canvas.getContext("2d");
+  const plane = $("flight-plane");
+  const from = STAGE_CENTRES[fromId] || STAGE_CENTRES[1];
+  const to = STAGE_CENTRES[toId] || STAGE_CENTRES[2];
+  const rect = canvas.getBoundingClientRect();
+  const size = Math.round(Math.min(900, Math.max(320, rect.width * Math.min(window.devicePixelRatio || 1, 2))));
+  canvas.width = size;
+  canvas.height = size;
+  overlay.classList.remove("landed", "stamped");
+  state.flightLanded = false;
+  let offset = 0;
+  let stamped = false;
+  const skip = () => {
+    if (!stamped) offset = FLIGHT_STAMP_AT;
+  };
+  overlay.onpointerup = (event) => {
+    if (event.target.closest("button")) return;
+    skip();
+  };
+  if (reducedMotion?.matches) offset = FLIGHT_STAMP_AT;
+  else Sound.flight((FLIGHT_STAMP_AT - 200) / 1000);
+  const startedAt = performance.now();
+
+  const frame = (now) => {
+    const t = now - startedAt + offset;
+    const air = easeInOut(clamp01((t - FLIGHT_PRE_MS) / FLIGHT_AIR_MS));
+    const landing = clamp01((t - FLIGHT_PRE_MS - FLIGHT_AIR_MS) / FLIGHT_LAND_MS);
+    const takeoff = clamp01(t / FLIGHT_PRE_MS);
+    const position = slerpLonLat(from, to, air);
+    const ahead = slerpLonLat(from, to, Math.min(1, air + 0.02));
+    const behind = slerpLonLat(from, to, Math.max(0, air - 0.02));
+
+    const trail = [];
+    for (let step = 1; step <= 16; step += 1) {
+      const p = air - step * 0.012;
+      if (p <= 0) break;
+      trail.push(slerpLonLat(from, to, p));
+    }
+    const view = drawGlobeScene(ctx, size, position[0], position[1], {
+      route: { from, to, progress: air },
+      trail,
+      pins: [{ at: from, color: "rgba(255, 202, 102, 0.9)" }, { at: to, color: "#ff6b78", pulse: now }],
+    });
+
+    // Plane heading follows the route on screen; art points nose-up.
+    const a = view.project(...(air < 0.99 ? position : behind));
+    const b = view.project(...(air < 0.99 ? ahead : position));
+    const heading = Math.atan2(b.x - a.x, -(b.y - a.y)) * 180 / Math.PI;
+    const scale = (0.62 + 0.26 * takeoff) + 0.28 * Math.sin(Math.PI * air) - 0.4 * landing;
+    plane.style.opacity = String(1 - landing * 0.9);
+    plane.style.transform = `translate(-50%, -50%) rotate(${Number.isFinite(heading) ? heading.toFixed(1) : 0}deg) scale(${scale.toFixed(3)})`;
+
+    if (!stamped && t >= FLIGHT_STAMP_AT) {
+      stamped = true;
+      overlay.classList.add("stamped");
+      setTimeout(() => {
+        Sound.stamp();
+        haptic("badge");
+      }, reducedMotion?.matches ? 0 : 260);
+      setTimeout(() => {
+        overlay.classList.add("landed");
+        state.flightLanded = true;
+      }, reducedMotion?.matches ? 0 : 700);
+    }
+    if (t < FLIGHT_STAMP_AT + 1200) state.flightRaf = requestAnimationFrame(frame);
+  };
+  state.flightRaf = requestAnimationFrame(frame);
 }
 
 // ─────────────────────────────────────────────
@@ -1743,7 +1942,7 @@ function renderRunSummary(run) {
   $("result-badges").innerHTML = badges.map(({ id, tier }) => {
     const badge = BADGES.find((item) => item.id === id);
     if (!badge) return "";
-    return `<div class="result-badge tier-${tier}"><span>${badge.icon}</span><small>${escapeHtml(badge.name)}<br>${TIER_NAMES[tier - 1]}</small></div>`;
+    return `<div class="result-badge tier-${tier}"><span>${badge.art ? `<img src="${badge.art}" alt="">` : badge.icon}</span><small>${escapeHtml(badge.name)}<br>${TIER_NAMES[tier - 1]}</small></div>`;
   }).join("");
   const byCc = new Map(allItems().map((item) => [item.cc, item]));
   const missed = (run.missed || []).map((cc) => byCc.get(cc)).filter(Boolean);
@@ -1819,7 +2018,7 @@ function escapeHtml(value) {
 }
 
 // ─────────────────────────────────────────────
-// Menu globe (capped resolution, 30 fps, static when reduced motion is on)
+// Globe rendering (shared by the menu globe and the flight scene)
 // ─────────────────────────────────────────────
 const GLOBE_FRAME_MS = 33;
 const GLOBE_MAX_PX = 900;
@@ -1840,12 +2039,205 @@ const ISLAND_DOTS = [
 ];
 const CITY_DOTS = [[2, 48], [-3, 40], [12, 42], [18, 59], [-74, 41], [139, 36], [151, -34]];
 
+// Orthographic projection centred on (lon0, lat0).
+function makeProjector(lon0, lat0, radius, cx, cy) {
+  const phi0 = lat0 * Math.PI / 180;
+  const sinPhi0 = Math.sin(phi0);
+  const cosPhi0 = Math.cos(phi0);
+  return (lon, lat) => {
+    const dl = (lon - lon0) * Math.PI / 180;
+    const phi = lat * Math.PI / 180;
+    const cosPhi = Math.cos(phi);
+    const sinPhi = Math.sin(phi);
+    const cosDl = Math.cos(dl);
+    return {
+      x: cx + radius * cosPhi * Math.sin(dl),
+      y: cy - radius * (cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosDl),
+      z: sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosDl,
+    };
+  };
+}
+
+function strokeVisible(ctx, points, minZ = 0.02) {
+  ctx.beginPath();
+  let started = false;
+  points.forEach((point) => {
+    if (point.z <= minZ) {
+      started = false;
+      return;
+    }
+    if (!started) {
+      ctx.moveTo(point.x, point.y);
+      started = true;
+    } else {
+      ctx.lineTo(point.x, point.y);
+    }
+  });
+  ctx.stroke();
+}
+
+function drawGlobeScene(ctx, size, lon0, lat0, extras = {}) {
+  const width = size;
+  const radius = width * (extras.radiusRatio || 0.38);
+  const cx = width / 2;
+  const cy = width / 2;
+  const project = makeProjector(lon0, lat0, radius, cx, cy);
+  ctx.clearRect(0, 0, width, width);
+
+  const ocean = ctx.createRadialGradient(cx - radius * 0.32, cy - radius * 0.36, radius * 0.1, cx, cy, radius);
+  ocean.addColorStop(0, "#2c6f9f");
+  ocean.addColorStop(0.6, "#123f6d");
+  ocean.addColorStop(1, "#06101f");
+  ctx.fillStyle = ocean;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.clip();
+
+  ctx.strokeStyle = "rgba(179, 191, 208, 0.16)";
+  ctx.lineWidth = Math.max(1, width / 1280);
+  [-60, -30, 0, 30, 60].forEach((lat) => {
+    const points = [];
+    for (let lon = -180; lon <= 180; lon += 4) points.push(project(lon, lat));
+    strokeVisible(ctx, points, 0);
+  });
+  for (let lon = -150; lon <= 180; lon += 30) {
+    const points = [];
+    for (let lat = -82; lat <= 82; lat += 4) points.push(project(lon, lat));
+    strokeVisible(ctx, points, 0);
+  }
+
+  // Project each land shape once and reuse it for fill and coast glow.
+  const features = worldGlobeData.length ? worldGlobeData : FALLBACK_GLOBE;
+  const visible = [];
+  features.forEach((feature) => {
+    feature.polygons.forEach((shape) => {
+      const points = shape.map(([lon, lat]) => project(lon, lat));
+      let zTotal = 0;
+      for (const point of points) zTotal += point.z;
+      if (zTotal / points.length > -0.04) visible.push(points);
+    });
+  });
+  ctx.fillStyle = "#35e0b2";
+  ctx.strokeStyle = "rgba(244, 247, 251, 0.28)";
+  ctx.lineWidth = Math.max(1.15, width / 1320);
+  visible.forEach((points) => {
+    ctx.beginPath();
+    points.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+  ctx.strokeStyle = "rgba(53, 224, 178, 0.34)";
+  ctx.lineWidth = Math.max(1, width / 1800);
+  visible.forEach((points) => strokeVisible(ctx, points));
+
+  ctx.fillStyle = "#35e0b2";
+  ISLAND_DOTS.forEach(([lon, lat, dotSize]) => {
+    const point = project(lon, lat);
+    if (point.z <= 0) return;
+    ctx.globalAlpha = 0.42 + point.z * 0.58;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, Math.max(1.6, dotSize * width / 960), 0, Math.PI * 2);
+    ctx.fill();
+  });
+  if (!extras.route) {
+    ctx.fillStyle = "rgba(255, 209, 102, 0.86)";
+    CITY_DOTS.forEach(([lon, lat]) => {
+      const point = project(lon, lat);
+      if (point.z <= 0) return;
+      ctx.globalAlpha = 0.35 + point.z * 0.65;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, Math.max(2.1, width / 430), 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  ctx.globalAlpha = 1;
+
+  if (extras.route) {
+    const { from, to, progress } = extras.route;
+    const flown = [];
+    const remaining = [];
+    for (let step = 0; step <= 60; step += 1) {
+      const p = step / 60;
+      const point = project(...slerpLonLat(from, to, p));
+      if (p <= progress) flown.push(point);
+      if (p >= progress) remaining.push(point);
+    }
+    ctx.lineCap = "round";
+    ctx.setLineDash([width / 90, width / 70]);
+    ctx.strokeStyle = "rgba(255, 202, 102, 0.55)";
+    ctx.lineWidth = Math.max(2, width / 260);
+    strokeVisible(ctx, remaining, 0);
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(255, 202, 102, 0.95)";
+    ctx.lineWidth = Math.max(2.5, width / 200);
+    strokeVisible(ctx, flown, 0);
+  }
+  if (extras.trail?.length) {
+    extras.trail.forEach((lonLat, index) => {
+      const point = project(...lonLat);
+      if (point.z <= 0) return;
+      const fade = 1 - index / extras.trail.length;
+      ctx.globalAlpha = 0.5 * fade;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, Math.max(2, width / 110) * (0.4 + fade * 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+  (extras.pins || []).forEach((pin) => {
+    const point = project(...pin.at);
+    if (point.z <= 0) return;
+    const base = Math.max(4, width / 80);
+    if (pin.pulse) {
+      const phase = (pin.pulse % 1400) / 1400;
+      ctx.globalAlpha = 0.6 * (1 - phase);
+      ctx.strokeStyle = pin.color;
+      ctx.lineWidth = Math.max(2, width / 300);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, base * (1 + phase * 2.4), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = pin.color;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, base, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  const rim = ctx.createRadialGradient(cx - radius * 0.25, cy - radius * 0.35, radius * 0.3, cx, cy, radius * 1.05);
+  rim.addColorStop(0, "rgba(255,255,255,0.16)");
+  rim.addColorStop(0.58, "rgba(255,255,255,0)");
+  rim.addColorStop(1, "rgba(0,0,0,0.46)");
+  ctx.fillStyle = rim;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(82, 183, 255, 0.44)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  return { project };
+}
+
 function startGlobe() {
   const canvas = $("globe-canvas");
   const ctx = canvas.getContext("2d");
   let lastFrame = 0;
 
-  function resizeCanvas() {
+  function sizeCanvas() {
     const rect = canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const size = Math.round(Math.max(320, Math.min(GLOBE_MAX_PX, Math.max(rect.width, rect.height) * dpr)));
@@ -1853,138 +2245,10 @@ function startGlobe() {
       canvas.width = size;
       canvas.height = size;
     }
+    return size;
   }
 
-  function project(lon, lat, rotation, radius, cx, cy) {
-    const lambda = (lon + rotation) * Math.PI / 180;
-    const phi = lat * Math.PI / 180;
-    return {
-      x: cx + radius * Math.cos(phi) * Math.sin(lambda),
-      y: cy - radius * Math.sin(phi),
-      z: Math.cos(phi) * Math.cos(lambda),
-    };
-  }
-
-  function strokeVisible(points) {
-    ctx.beginPath();
-    let started = false;
-    points.forEach((point) => {
-      if (point.z <= 0.02) {
-        started = false;
-        return;
-      }
-      if (!started) {
-        ctx.moveTo(point.x, point.y);
-        started = true;
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
-    });
-    ctx.stroke();
-  }
-
-  function draw(now) {
-    resizeCanvas();
-    const width = canvas.width;
-    const height = canvas.height;
-    const radius = width * 0.38;
-    const cx = width / 2;
-    const cy = height / 2;
-    const rotation = now * 0.012;
-    ctx.clearRect(0, 0, width, height);
-
-    const ocean = ctx.createRadialGradient(cx - radius * 0.32, cy - radius * 0.36, radius * 0.1, cx, cy, radius);
-    ocean.addColorStop(0, "#2c6f9f");
-    ocean.addColorStop(0.6, "#123f6d");
-    ocean.addColorStop(1, "#06101f");
-    ctx.fillStyle = ocean;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.strokeStyle = "rgba(179, 191, 208, 0.16)";
-    ctx.lineWidth = Math.max(1, width / 1280);
-    [-60, -30, 0, 30, 60].forEach((lat) => {
-      const points = [];
-      for (let lon = -180; lon <= 180; lon += 4) points.push(project(lon, lat, rotation, radius, cx, cy));
-      strokeVisible(points);
-    });
-    [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].forEach((lon) => {
-      const points = [];
-      for (let lat = -82; lat <= 82; lat += 4) points.push(project(lon, lat, rotation, radius, cx, cy));
-      strokeVisible(points);
-    });
-
-    // Project each land shape once per frame and reuse it for fill and coast glow.
-    const features = worldGlobeData.length ? worldGlobeData : FALLBACK_GLOBE;
-    const visible = [];
-    features.forEach((feature) => {
-      feature.polygons.forEach((shape) => {
-        const points = shape.map(([lon, lat]) => project(lon, lat, rotation, radius, cx, cy));
-        let zTotal = 0;
-        for (const point of points) zTotal += point.z;
-        if (zTotal / points.length > -0.04) visible.push(points);
-      });
-    });
-    ctx.fillStyle = "#35e0b2";
-    ctx.strokeStyle = "rgba(244, 247, 251, 0.28)";
-    ctx.lineWidth = Math.max(1.15, width / 1320);
-    visible.forEach((points) => {
-      ctx.beginPath();
-      points.forEach((point, index) => {
-        if (index === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    });
-    ctx.strokeStyle = "rgba(53, 224, 178, 0.34)";
-    ctx.lineWidth = Math.max(1, width / 1800);
-    visible.forEach(strokeVisible);
-
-    ctx.fillStyle = "#35e0b2";
-    ISLAND_DOTS.forEach(([lon, lat, size]) => {
-      const point = project(lon, lat, rotation, radius, cx, cy);
-      if (point.z <= 0) return;
-      ctx.globalAlpha = 0.42 + point.z * 0.58;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, Math.max(1.6, size * width / 960), 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.fillStyle = "rgba(255, 209, 102, 0.86)";
-    CITY_DOTS.forEach(([lon, lat]) => {
-      const point = project(lon, lat, rotation, radius, cx, cy);
-      if (point.z <= 0) return;
-      ctx.globalAlpha = 0.35 + point.z * 0.65;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, Math.max(2.1, width / 430), 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    const rim = ctx.createRadialGradient(cx - radius * 0.25, cy - radius * 0.35, radius * 0.3, cx, cy, radius * 1.05);
-    rim.addColorStop(0, "rgba(255,255,255,0.16)");
-    rim.addColorStop(0.58, "rgba(255,255,255,0)");
-    rim.addColorStop(1, "rgba(0,0,0,0.46)");
-    ctx.fillStyle = rim;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "rgba(82, 183, 255, 0.44)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
+  const draw = (now) => drawGlobeScene(ctx, sizeCanvas(), -now * 0.012, 0);
   const loop = (now) => {
     if (now - lastFrame >= GLOBE_FRAME_MS) {
       lastFrame = now;
@@ -1995,7 +2259,6 @@ function startGlobe() {
   stopGlobe();
   if (reducedMotion?.matches) {
     draw(0);
-    // Redraw once more when the full globe data arrives.
     setTimeout(() => { if (state.view === "menu-screen") draw(0); }, 1500);
     return;
   }
@@ -2017,7 +2280,13 @@ function wireEvents() {
   }));
   onPress($("create-passport-btn"), confirmCharacterSelect);
   onPress($("cancel-switch-btn"), cancelCharacterSelect);
-  onPress($("splash-continue-btn"), continueFromSplash);
+  onPress($("splash-continue-btn"), () => {
+    continueFromSplash();
+    const previewStage = Number(new URLSearchParams(location.search).get("flight"));
+    if (previewStage >= 2 && previewStage <= STAGES.length && state.view === "menu-screen") {
+      setTimeout(() => showStageUnlock(STAGES[previewStage - 1], { preview: true }), 400);
+    }
+  });
   onPress($("journey-btn"), () => startMode("journey"));
   onPress($("switch-char-btn"), () => { Sound.tap(); openCharacterSelect("switch"); });
   onPress($("new-game-btn"), openNewGameDialog);
