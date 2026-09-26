@@ -12,7 +12,6 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="preconnect" href="https://flagcdn.com">
   <link rel="preload" href="splash_smol.jpg" as="image">
   <link rel="stylesheet" href="src/styles.css">
 </head>
@@ -39,24 +38,14 @@
         </button>
       </div>
       <h1 id="onboarding-title">GeoSpark</h1>
-      <p class="screen-copy">Create your passport and choose the shape of your journey.</p>
-      <label class="field-label" for="player-name">Name</label>
-      <input id="player-name" class="text-field" type="text" maxlength="18" autocomplete="nickname" placeholder="Explorer name">
-      <div class="choice-grid" id="archetype-grid">
-        <button class="choice-card selected" type="button" data-archetype="historian">
-          <span class="choice-title">The Historian</span>
-          <span class="choice-copy">15 sparks per level, 7 levels per stage.</span>
-        </button>
-        <button class="choice-card" type="button" data-archetype="backpacker">
-          <span class="choice-title">The Backpacker</span>
-          <span class="choice-copy">10 sparks per level, 12 levels per stage.</span>
-        </button>
-        <button class="choice-card" type="button" data-archetype="pilot">
-          <span class="choice-title">The Pilot</span>
-          <span class="choice-copy">5 sparks per level, 20 levels per stage.</span>
-        </button>
+      <p class="screen-copy" id="onboarding-copy">Create your passport and choose your travelling style. You can switch character later.</p>
+      <div class="name-field-wrap" id="name-field-wrap">
+        <label class="field-label" for="player-name">Name</label>
+        <input id="player-name" class="text-field" type="text" maxlength="18" autocomplete="nickname" placeholder="Explorer name">
       </div>
+      <div class="character-detail" id="character-detail" aria-live="polite"></div>
       <button class="primary-btn" id="create-passport-btn" type="button">Create Passport</button>
+      <button class="text-btn hidden" id="cancel-switch-btn" type="button">Keep current character</button>
     </section>
 
     <section class="screen menu-screen hidden" id="menu-screen" aria-labelledby="menu-title">
@@ -65,6 +54,9 @@
           <div class="eyebrow">Main Menu</div>
           <h1 id="menu-title">GeoSpark</h1>
           <p class="menu-player">Passport: <span id="menu-name">Explorer</span></p>
+          <button class="character-chip" id="switch-char-btn" type="button">
+            <span id="menu-character-name">The Historian</span><small>Switch</small>
+          </button>
         </div>
         <img class="mini-mark" src="icon-192.png" alt="">
       </header>
@@ -72,7 +64,7 @@
       <div class="menu-hero">
         <img class="menu-character-art" id="menu-character-art" src="assets/menu/main_historian.png" alt="">
         <div class="globe-shell" aria-hidden="true">
-          <canvas id="globe-canvas" width="1024" height="1024"></canvas>
+          <canvas id="globe-canvas" width="600" height="600"></canvas>
         </div>
         <div class="passport-strip">
           <div><span id="menu-stage">Europe</span><small>Current Stage</small></div>
@@ -86,32 +78,35 @@
         <button class="mode-btn primary-mode" id="journey-btn" type="button">
           <span><b id="journey-label">Journey</b><small id="journey-copy">Campaign progression</small></span><strong id="journey-action">Start</strong>
         </button>
-        <button class="mode-btn new-game-mode" id="new-game-btn" type="button">
-          <span><b>New Game</b><small>Reset passport progress</small></span><strong>New</strong>
-        </button>
         <button class="mode-btn" id="challenge-btn" type="button">
-          <span><b>Challenge</b><small>Timed arcade run</small></span><strong>Play</strong>
+          <span><b>Challenge</b><small id="challenge-copy">Timed arcade run</small></span><strong>Play</strong>
+        </button>
+        <button class="mode-btn stamps-mode" id="stamps-btn" type="button">
+          <span><b>Stamp Book</b><small id="stamps-copy">Achievements and rewards</small></span><strong id="stamps-action">0/0</strong>
         </button>
         <button class="mode-btn" id="learning-btn" type="button">
           <span><b>Learning</b><small>Flags, capitals, cities, regions</small></span><strong>Study</strong>
         </button>
         <button class="mode-btn locked" id="zen-btn" type="button">
-          <span><b id="zen-label">Zen Locked</b><small id="zen-copy">Complete Asia or buy for 5,000 AirMiles</small></span><strong id="zen-action">Lock</strong>
+          <span><b id="zen-label">Zen Locked</b><small id="zen-copy">Complete Asia or buy for 1,500 AirMiles</small></span><strong id="zen-action">Lock</strong>
         </button>
       </div>
 
       <div class="section-label">Journey Map</div>
       <div class="stage-track" id="stage-track"></div>
-      <div class="version-label" id="menu-version">GeoSpark v0.5.12</div>
+      <div class="menu-footer">
+        <div class="version-label" id="menu-version">GeoSpark v0.6.0</div>
+        <button class="text-btn" id="new-game-btn" type="button">Reset passport</button>
+      </div>
 
       <div class="confirm-overlay hidden" id="new-game-dialog" role="dialog" aria-modal="true" aria-labelledby="new-game-title">
         <div class="confirm-panel">
-          <div class="eyebrow">New Game</div>
-          <h2 id="new-game-title">Reset your passport?</h2>
-          <p>This will erase your journey progress, stamps, currencies, Zen unlock status, and challenge high score.</p>
+          <div class="eyebrow">Reset Passport</div>
+          <h2 id="new-game-title">Start again from scratch?</h2>
+          <p>This erases your journey progress, stamps, badges, currencies, Zen unlock and challenge high score.</p>
           <div class="confirm-actions">
             <button class="secondary-btn" id="new-game-cancel-btn" type="button">Cancel</button>
-            <button class="primary-btn danger-btn" id="new-game-confirm-btn" type="button">Start New Game</button>
+            <button class="primary-btn danger-btn" id="new-game-confirm-btn" type="button">Reset</button>
           </div>
         </div>
       </div>
@@ -138,12 +133,24 @@
       <div class="learn-list" id="learn-list"></div>
     </section>
 
+    <section class="screen stamps-screen hidden" id="stamps-screen" aria-labelledby="stamps-title">
+      <header class="game-hud">
+        <button class="icon-btn" id="stamps-back-btn" type="button" aria-label="Back to menu">Back</button>
+        <div class="hud-center">
+          <div class="hud-mode" id="stamps-title">Stamp Book</div>
+        </div>
+        <div class="learn-count" id="stamps-count">0</div>
+      </header>
+      <div class="stamps-summary" id="stamps-summary"></div>
+      <div class="stamps-grid" id="stamps-grid"></div>
+    </section>
+
     <section class="screen game-screen hidden" id="game-screen" aria-live="polite">
       <header class="game-hud" id="game-hud">
-        <button class="icon-btn" id="back-menu-btn" type="button" aria-label="Back to menu">‹</button>
+        <button class="icon-btn" id="back-menu-btn" type="button" aria-label="Save and return to menu">‹</button>
         <div class="hud-center">
           <div class="hud-mode" id="hud-mode">Journey</div>
-          <div class="progress-track" id="journey-progress-track"><div id="journey-progress-fill"></div></div>
+          <div class="hud-character" id="hud-character">The Historian</div>
         </div>
         <button class="icon-btn pause-control" id="pause-btn" type="button" aria-label="Pause game">Ⅱ</button>
       </header>
@@ -163,11 +170,11 @@
       <section class="run-progress" id="run-progress">
         <div class="run-progress-top">
           <span id="stage-progress-label">Stage 1/6 · Europe</span>
-          <span id="level-progress-label">Level 0/7</span>
+          <span id="level-progress-label">Level 0/10</span>
         </div>
         <div class="run-progress-track"><div id="section-progress-fill"></div></div>
         <div class="run-progress-bottom">
-          <span id="question-progress-label">Question 0/15</span>
+          <span id="question-progress-label">Question 0/10</span>
           <span id="section-progress-label">0% section</span>
         </div>
       </section>
@@ -184,8 +191,9 @@
       <div class="answer-grid" id="answer-grid"></div>
 
       <div class="tool-row" id="tool-row">
-        <button class="secondary-btn" id="auto-correct-btn" type="button">Auto-Correct · 50 GeoSparks</button>
-        <button class="secondary-btn" id="skip-level-btn" type="button">Skip Level · 750 AirMiles</button>
+        <button class="secondary-btn ability-btn" id="ability-btn" type="button">Ability</button>
+        <button class="secondary-btn" id="auto-correct-btn" type="button">Auto-Correct · 20 GS</button>
+        <button class="secondary-btn" id="skip-level-btn" type="button">Skip Level · 750 AM</button>
       </div>
 
       <div class="feedback-line" id="feedback-line"></div>
@@ -193,20 +201,9 @@
       <div class="pause-overlay hidden" id="pause-overlay">
         <div class="pause-panel">
           <h2>Paused</h2>
-          <p>The timer is frozen.</p>
+          <p id="pause-copy">The timer is frozen.</p>
           <button class="primary-btn" id="resume-btn" type="button">Resume</button>
-        </div>
-      </div>
-
-      <div class="confirm-overlay hidden" id="abandon-run-dialog" role="dialog" aria-modal="true" aria-labelledby="abandon-run-title">
-        <div class="confirm-panel">
-          <div class="eyebrow">Journey Penalty</div>
-          <h2 id="abandon-run-title">Leave this run?</h2>
-          <p id="abandon-run-copy">Leaving now will apply the Journey penalty.</p>
-          <div class="confirm-actions">
-            <button class="secondary-btn" id="abandon-run-cancel-btn" type="button">Keep Playing</button>
-            <button class="primary-btn danger-btn" id="abandon-run-confirm-btn" type="button">Leave Journey</button>
-          </div>
+          <button class="text-btn" id="pause-exit-btn" type="button">Save &amp; exit to menu</button>
         </div>
       </div>
 
@@ -233,13 +230,28 @@
     </section>
 
     <section class="screen result-screen hidden" id="result-screen">
+      <div class="eyebrow" id="result-eyebrow">Run Summary</div>
       <h1 id="result-title">Run Complete</h1>
       <p id="result-copy" class="screen-copy"></p>
       <div class="result-score" id="result-score">0</div>
-      <button class="primary-btn hidden" id="result-learning-btn" type="button">Study Learning Mode</button>
-      <div class="version-label" id="result-version">GeoSpark v0.5.12</div>
-      <button class="primary-btn" id="result-menu-btn" type="button">Return to Menu</button>
+      <div class="result-stats" id="result-stats"></div>
+      <div class="result-block hidden" id="result-badges-block">
+        <div class="section-label">New stamps</div>
+        <div class="result-badges" id="result-badges"></div>
+      </div>
+      <div class="result-block hidden" id="result-missed-block">
+        <div class="section-label">Places to review</div>
+        <div class="result-missed" id="result-missed"></div>
+      </div>
+      <div class="result-actions">
+        <button class="primary-btn" id="result-retry-btn" type="button">Try Again</button>
+        <button class="secondary-btn hidden" id="result-review-btn" type="button">Review these in Learning</button>
+        <button class="secondary-btn" id="result-menu-btn" type="button">Return to Menu</button>
+      </div>
+      <div class="version-label" id="result-version">GeoSpark v0.6.0</div>
     </section>
+
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
   </main>
 
   <script src="src/app.js" type="module"></script>
