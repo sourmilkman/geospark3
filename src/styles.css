@@ -1871,3 +1871,9 @@ h1 {
 .question-panel:has(.flag-display.empty) h2 {
   font-size: 30px;
 }
+
+/* Character art is now a transparent cut-out; fade the flat waist crop instead of a hard edge */
+.menu-character-art {
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
+}

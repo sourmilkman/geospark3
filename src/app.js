@@ -1,5 +1,5 @@
 const STORAGE_KEY = "geospark3.passport";
-const APP_VERSION = "0.6.0";
+const APP_VERSION = "0.6.1";
 const PASSPORT_VERSION = 2;
 
 // Pacing is shared by every character so characters can be switched without losing progress.
@@ -125,6 +125,7 @@ const EUROPE_CORE = new Set([
   "Austria", "Belgium", "Croatia", "Czechia", "Denmark", "Finland",
   "Hungary", "Iceland", "Romania", "Switzerland", "Ukraine",
 ]);
+const ENABLE_MAP_SELECT = false;
 const EUROPE_MAP_LEVEL_START = 5; // level number (1-based) in Stage 1 for non-Pilot characters
 const EUROPE_MICROSTATES = new Set(["Andorra", "Liechtenstein", "Luxembourg", "Malta", "Monaco", "San Marino", "Vatican City"]);
 const EUROPE_PIN_POSITIONS = {
@@ -1003,7 +1004,8 @@ function adaptiveWeight(item) {
 function chooseQuestionType(pool, mapPool) {
   const archetype = getArchetype();
   if (mapPool.length >= 4 && Math.random() < archetype.mapRate) {
-    return Math.random() < 0.5 ? "mapIdentify" : "mapSelect";
+    // Tap-the-map questions are switched off for now (touch accuracy); only "name the highlighted country".
+    return ENABLE_MAP_SELECT && Math.random() < 0.5 ? "mapSelect" : "mapIdentify";
   }
   const countries = pool.filter(isCountry);
   const states = pool.filter(isUSState);
